@@ -11,6 +11,13 @@ Output: <out>/tracks.npz with arrays
     camera    [frame, t, a, b, tx, ty, inliers]   motion from the previous sampled frame
 
     python -m touchline_cv.track VIDEO --out pipeline/out/<match> [--fps 15]
+
+Input size stays at 1920 (measured 2026-10-13 on Leeming v La Fammia, RTX 3060,
+120 frames; "kept" = share of 1920's detections still found):
+    1920: 70 ms/frame        1600: 55 ms, 90% kept, 75% of distant players
+    1280: 37 ms, 72% kept, 35% of distant players     960: 23 ms, 52%, 9%
+Team shape needs every player, so speed has to come from elsewhere: TensorRT
+FP16, batching frames per GPU call, or a lower --fps where 15 isn't needed.
 """
 
 from __future__ import annotations
