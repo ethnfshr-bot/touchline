@@ -108,10 +108,24 @@ describe('minsOf', () => {
     expect(minsOf(makeMatch({ half: 30 }), 'gk')).toBe(60);
   });
 
-  it('falls back to the full match when nothing is recorded', () => {
-    // Known limitation, kept for parity with the prototype.
+  it('gives the full match when no lineup was recorded', () => {
+    const noLineup = makeMatch({ lineup: {} });
+    expect(minsOf(noLineup, 'fwd')).toBe(90);
+    expect(minsOf(noLineup, 'bench')).toBe(90); // blank override is ignored
+  });
+
+  it('estimates minutes for a player missing from a recorded lineup', () => {
+    // Forward's first action is at 10': assumed to have started, so the full match.
     expect(minsOf(m, 'fwd')).toBe(90);
-    expect(minsOf(m, 'bench')).toBe(90); // blank override is ignored
+    // An unrecorded sub tagged once at 80' gets 10 minutes, not 90.
+    const late = makeMatch({ events: [ev('us', 'pass', { pid: 'bench', t: 80 * 60 })] });
+    expect(minsOf(late, 'bench')).toBe(10);
+    // First action at 62': on from then to full time.
+    const sub = makeMatch({ events: [ev('us', 'pass', { pid: 'bench', t: 62 * 60 }), ev('us', 'pass', { pid: 'bench', t: 70 * 60 })] });
+    expect(minsOf(sub, 'bench')).toBe(28);
+    // Assists count as actions too.
+    const ast = makeMatch({ events: [ev('us', 'goal', { pid: 'fwd', ast: 'bench', t: 75 * 60 })] });
+    expect(minsOf(ast, 'bench')).toBe(15);
   });
 });
 

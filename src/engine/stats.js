@@ -106,17 +106,36 @@ export const halfLen = (m) => Number(m.half) || 45;
 
 const isBlank = (v) => v === '' || v == null;
 
-/** Minutes played: explicit override, else lineup on/off, else the full match. */
+/** A first action this close to kick-off is taken to mean "started the match". */
+export const EDGE_MINUTES = 15;
+
+const hasLineup = (m) => Object.values(m.lineup || {}).some((l) => l && l.pos);
+
+/**
+ * Minutes played, in order of preference:
+ *   1. an explicit minutes override;
+ *   2. the lineup's on/off times;
+ *   3. if a lineup was recorded but this player isn't in it, assume they came on
+ *      at their first tagged action (or started, if that's within EDGE_MINUTES
+ *      of kick-off) and stayed on: unrecorded subs are usually players coming on;
+ *   4. otherwise (no lineup recorded at all) the full match.
+ */
 export function minsOf(m, pid) {
   const v = m.minutes && m.minutes[pid];
   if (!isBlank(v)) return Number(v);
+  const full = halfLen(m) * 2;
   const l = m.lineup && m.lineup[pid];
   if (l && l.pos) {
     const on = Number(l.on) || 0;
-    const off = !isBlank(l.off) ? Number(l.off) : halfLen(m) * 2;
+    const off = !isBlank(l.off) ? Number(l.off) : full;
     return Math.max(0, off - on);
   }
-  return halfLen(m) * 2;
+  if (!hasLineup(m)) return full;
+  const ts = m.events.filter((e) => e.team === 'us' && (e.pid === pid || e.ast === pid)).map((e) => e.t / 60);
+  if (!ts.length) return full;
+  const first = Math.min(...ts);
+  const on = first < EDGE_MINUTES ? 0 : first;
+  return Math.max(1, Math.round(full - on));
 }
 
 /** Lineup position for this match, falling back to the player's squad position. */

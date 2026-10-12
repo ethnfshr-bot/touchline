@@ -24,7 +24,7 @@ function lineupPanel(m) {
   ${
     roster().length
       ? `<div class="tw"><table><thead><tr><th>Player</th><th>Position</th><th>On (min)</th><th>Off (min)</th></tr></thead><tbody>${rows}</tbody></table></div>
-  <p class="hint">Leave On blank for starters and Off blank if they played to full time. Minutes, ratings by position and on/off splits come from this.</p>`
+  <p class="hint">Leave On blank for starters and Off blank if they played to full time. Minutes, ratings by position and on/off splits come from this. Anyone you tag who isn't listed here is assumed to have come on at their first action and stayed on.</p>`
       : '<p class="hint">Add your squad first.</p>'
   }</details>`;
 }
