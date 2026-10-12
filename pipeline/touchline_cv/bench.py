@@ -55,6 +55,8 @@ def ball_models():
     ms = {"stock-1920": (YOLO("yolo11m.pt"), 1920, [32])}
     ms["roboflow"] = (YOLO(str(MODELS / "rf-ball.pt")), 1280, None)
     ms["amateur"] = (YOLO(str(MODELS / "amateur-ball.onnx"), task="detect"), 1280, None)
+    if (MODELS / "touchline-ball.pt").exists():
+        ms["touchline"] = (YOLO(str(MODELS / "touchline-ball.pt")), 1280, [0])  # class 0 = ball
     return ms
 
 
