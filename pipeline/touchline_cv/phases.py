@@ -235,7 +235,7 @@ def main():
         from .geometry import PitchMapper, camera_motion
 
         mapper = PitchMapper(Path(args.pitch), camera_motion(Path(args.pitch).parent, D["camera"]), D["fps"])
-    if args.balls:
+    if args.balls and Path(args.balls).exists():
         balls = np.load(args.balls)["balls"]
     result = phases(sec, kicks, D["persons"], team, mapper, balls)
     (out / "phases.json").write_text(json.dumps(result, indent=1))

@@ -114,6 +114,22 @@ export function heatmap(m, pid) {
   return pitchSVG(inner + `<text x="94" y="66" font-size="2.6" fill="var(--chalk)" text-anchor="middle" font-family="Barlow Condensed">Attacking →</text>`);
 }
 
+/** Pitch split into 3x3 zones shaded by count; grid from engine/zones.js. */
+export function zoneMap(grid, colour, label) {
+  const max = Math.max(1, ...grid.flat());
+  let inner = '';
+  for (let t = 0; t < 3; t++) {
+    for (let c = 0; c < 3; c++) {
+      const n = grid[t][c];
+      const x = t * 35, y = c * (68 / 3);
+      inner += `<rect x="${x}" y="${y.toFixed(2)}" width="35" height="${(68 / 3).toFixed(2)}" fill="${colour}" opacity="${n ? (0.15 + (0.65 * n) / max).toFixed(2) : 0}"/>`;
+      if (n) inner += `<text x="${x + 17.5}" y="${(y + 68 / 6 + 2.5).toFixed(2)}" font-size="7" font-weight="700" text-anchor="middle" fill="#fff" font-family="Barlow Condensed">${n}</text>`;
+    }
+  }
+  inner += `<text x="94" y="66" font-size="2.6" fill="var(--chalk)" text-anchor="middle" font-family="Barlow Condensed">You attack →</text>`;
+  return pitchSVG(inner, null, '').replace('aria-label="Pitch"', `aria-label="${esc(label)}"`);
+}
+
 const niceStep = (r) => (r <= 2 ? 0.5 : r <= 5 ? 1 : r <= 12 ? 2 : 5);
 
 function gridY(lo, hi, st, Y, pl, W, pr) {

@@ -1,5 +1,6 @@
 import { matchRatings } from '../../engine/rating.js';
 import { matchSummary } from '../../engine/summary.js';
+import { zonesPanel } from './zones.js';
 import { posPlayed, score, sortedMatches, teamStats } from '../../engine/stats.js';
 import { f2 } from '../../engine/util.js';
 import { cmpRow, heatmap, rateBadge, shotMap, thirdsSVG, xgRace } from '../charts.js';
@@ -115,8 +116,9 @@ export function vReport() {
       ${cmpRow('Recoveries', A.rec, B.rec)}${cmpRow('Aerials won', A.aer, B.aer)}${cmpRow('Fouls', A.fouls, B.fouls)}
     </div>
   </div>
+  ${zonesPanel([m], 'match')}
   ${shapePanel(m, opp)}
   <div class="panel"><h3>Player ratings</h3>${ps.length ? ratingsTable(m, ps, best) : '<p class="muted">Credit tagged actions to squad players to see ratings.</p>'}</div>
   ${fx ? focusPanel(m, fx) : ''}
-  ${glossaryPanel(['xg', 'race', 'sot', 'big', 'poss', 'tilt', 'ft', 'thirds', 'kp', 'xa', 'rating', ...(m.shape ? ['height', 'width', 'depth', 'area', 'line', 'territory', 'coverage'] : [])])}`;
+  ${glossaryPanel(['xg', 'race', 'sot', 'big', 'poss', 'tilt', 'ft', 'thirds', 'zones', 'kp', 'xa', 'rating',...(m.shape ? ['height', 'width', 'depth', 'area', 'line', 'territory', 'coverage'] : [])])}`;
 }

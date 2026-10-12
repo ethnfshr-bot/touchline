@@ -4,6 +4,7 @@ import { avgOf, f1, f2 } from '../../engine/util.js';
 import { barChart, lineChart, rateBadge } from '../charts.js';
 import { esc } from '../dom.js';
 import { glossaryPanel } from '../glossary.js';
+import { zonesPanel } from './zones.js';
 import { matchList, roster, ui } from '../state.js';
 
 const signed = (v, fmt) => (v >= 0 ? '+' : '') + fmt(v);
@@ -112,6 +113,6 @@ export function vSeason() {
     <button class="btn" data-a="csv">Export CSV</button></div></div>
   <div class="tw"><table><thead><tr><th>Player</th><th>Avg rating</th><th>Apps</th><th>Min</th><th>G</th><th>A</th><th>xG</th><th>xA</th><th>G−xG</th><th>Shots</th><th>SoT</th><th>KP</th><th>Pass %</th><th>Drb</th><th>Tkl</th><th>Int</th><th>Rec</th></tr></thead><tbody>${table}</tbody></table></div>
   <p class="hint">G−xG above zero means finishing better than the chances suggest.</p></div>
-  ${teamPanel(ms)}${playerPanel(rows, ms)}
-  ${glossaryPanel(['rating', 'p90', 'xg', 'xa', 'gxg', 'form', 'onoff', 'formation'])}`;
+  ${teamPanel(ms)}${zonesPanel(ms, 'season')}${playerPanel(rows, ms)}
+  ${glossaryPanel(['rating', 'p90', 'xg', 'xa', 'gxg', 'zones', 'form', 'onoff', 'formation'])}`;
 }
