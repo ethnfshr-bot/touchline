@@ -1,5 +1,7 @@
 # Touchline
 
+**Mission:** be the best open-source app for amateur teams to measure performance accurately. Low-level football is especially prone to bias (memory, opinion, who shouts loudest), so prefer objective, reproducible measurements over subjective judgement, and always show how a number was produced. The end goal is finding tactics and informing strategy, so favour metrics a coach can act on.
+
 Open-source tool for amateur 11-a-side teams: tag events from match video (Veo), get xG, FotMob-style player ratings and season tracking. Runs entirely in the browser; no backend. Licence: AGPL-3.0-or-later.
 
 ## Commands

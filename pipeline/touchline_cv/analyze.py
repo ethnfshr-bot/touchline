@@ -16,6 +16,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 PLAYER_HEIGHT_M = 1.75
+MAX_BALL_SPEED_MPS = 40.0  # amateur shots rarely exceed ~30 m/s
 
 
 # ---------- loading ----------
@@ -88,13 +89,15 @@ def assign_teams(persons: np.ndarray, us_hex: str, them_hex: str, k: int = 4):
     centres = km.cluster_centers_
     sizes = np.bincount(km.labels_, weights=weights, minlength=k)
 
-    # Match the hint colours to the two biggest clusters they're closest to.
+    # The two outfield teams are the two biggest clusters (keepers, referees and
+    # bench bibs are smaller). The hint colours only decide which is which:
+    # striped or washed-out kits rarely match a hint colour closely on their own.
     us_lab, them_lab = hex_to_lab(us_hex), hex_to_lab(them_hex)
-    big = np.argsort(sizes)[::-1][:3]
-    d_us = {c: np.linalg.norm(centres[c] - us_lab) for c in big}
-    d_them = {c: np.linalg.norm(centres[c] - them_lab) for c in big}
-    us_c = min(big, key=lambda c: d_us[c])
-    them_c = min((c for c in big if c != us_c), key=lambda c: d_them[c])
+    c1, c2 = np.argsort(sizes)[::-1][:2]
+    d = lambda c, lab: np.linalg.norm(centres[c] - lab)
+    straight = d(c1, us_lab) + d(c2, them_lab)
+    swapped = d(c2, us_lab) + d(c1, them_lab)
+    us_c, them_c = (c1, c2) if straight <= swapped else (c2, c1)
 
     team = {}
     for tid, lab in zip(tracks, km.labels_):
@@ -148,6 +151,9 @@ def ball_track(balls: np.ndarray, persons: np.ndarray, motion: dict, fps: float,
                 dt = gap / fps
                 vx, vy = (x - px) / dt, (y - py) / dt
                 speed = float(np.hypot(vx, vy) * mpp)
+                if not (speed <= MAX_BALL_SPEED_MPS):
+                    # A jump between two different detections, not real ball motion.
+                    speed = vx = vy = np.nan
         out.append([f, t, x, y, c, speed, vx, vy, mpp])
         prev = (f, t, x, y)
     return np.array(out)
