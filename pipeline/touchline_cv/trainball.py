@@ -26,6 +26,7 @@ def main():
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--imgsz", type=int, default=1280)
     ap.add_argument("--batch", type=int, default=8)
+    ap.add_argument("--workers", type=int, default=0)
     args = ap.parse_args()
 
     data = Path(args.data_dir) / "data.yaml"
@@ -36,11 +37,13 @@ def main():
         # Football-friendly augmentation: no vertical flips (the sky is always up),
         # mild scale changes, mosaic helps with small objects.
         flipud=0.0, fliplr=0.5, scale=0.3, mosaic=1.0, close_mosaic=10, plots=False, verbose=False,
+        # Windows: multi-process data loading crashed inside cv2.resize; load in-process.
+        workers=args.workers,
     )
     best = Path(res.save_dir) / "weights" / "best.pt"
     MODELS.mkdir(exist_ok=True)
     shutil.copy(best, MODELS / "touchline-ball.pt")
-    metrics = YOLO(str(best)).val(data=str(data), imgsz=args.imgsz, batch=args.batch, verbose=False)
+    metrics = YOLO(str(best)).val(data=str(data), imgsz=args.imgsz, batch=args.batch, workers=args.workers, verbose=False)
     names = metrics.names
     for i, c in enumerate(metrics.box.ap_class_index):
         print(f"{names[int(c)]}: precision {metrics.box.p[i]:.3f} recall {metrics.box.r[i]:.3f} mAP50 {metrics.box.ap50[i]:.3f}")
