@@ -3,8 +3,9 @@
 Combines phases.json (kick-offs, half-time, full-time, goals) and
 shots_v2.json (shots with pitch locations). A goal is matched to the scoring
 team's most recent shot in the GOAL_LOOKBACK_S seconds before the restart;
-that shot becomes a goal. Goals with no matching shot can't be placed on the
-pitch, so they're listed under generator.unplaced_goals instead of guessed.
+that shot becomes a goal. A goal with no matching shot is written without a
+location (noloc): it counts for the score but not for xG. Goals whose scoring
+team couldn't be told are listed under generator.unplaced_goals.
 
     python -m touchline_cv.export OUT_DIR --video NAME.mp4 [--out FILE]
 """
@@ -31,6 +32,9 @@ def build(phases: dict, shots: list, video_name: str, shape: dict | None = None)
         cands = [e for e in events if e["team"] == side and 0 < g["t"] - e["vt"] <= GOAL_LOOKBACK_S]
         if side and cands:
             max(cands, key=lambda e: e["vt"])["type"] = "goal"
+        elif side:
+            # Known scorer, unknown location: a goal that counts for the score but not xG.
+            events.append({"vt": g["t"], "team": side, "type": "goal", "noloc": True, "conf": 0.5})
         else:
             unplaced.append(g)
     sync = {k: round(float(phases[k]), 2) for k in ("k1", "k2", "ht", "ft") if phases.get(k) is not None}

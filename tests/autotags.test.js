@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AutoTagError, mergeAutoTags, parseAutoTags } from '../src/storage/autotags.js';
+import { score, teamStats } from '../src/engine/stats.js';
 import { ev, makeMatch } from './fixtures.js';
 
 const auto = () => ({
@@ -53,6 +54,16 @@ describe('mergeAutoTags', () => {
     const m = mergeAutoTags(start, auto(), mkid);
     expect(m.events.filter((e) => !e.auto)).toHaveLength(1);
     expect(m.events.filter((e) => e.auto)).toHaveLength(2);
+  });
+
+  it('accepts goals without a position and counts them in the score only', () => {
+    const a = auto();
+    a.events = [{ vt: 1000, team: 'them', type: 'goal', noloc: true }];
+    const m = mergeAutoTags(makeMatch({ events: [] }), parseAutoTags(a), mkid);
+    expect(m.events[0]).toMatchObject({ type: 'goal', noloc: 1, x: 50, y: 50 });
+    expect(score(m)).toEqual([0, 1]);
+    expect(teamStats(m, 'them').xg).toBe(0);
+    expect(teamStats(m, 'them').ft).toBe(0);
   });
 
   it('keeps only known numeric fields from a team shape summary', () => {

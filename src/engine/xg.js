@@ -30,8 +30,13 @@ export function shotGeometry(e) {
   return { distance: Math.hypot(X, Y), angle };
 }
 
-/** Expected goals for one shot event. */
+/**
+ * Expected goals for one shot event. Shots without a known location (`noloc`,
+ * e.g. goals detected automatically from the restart) count as 0: better an
+ * honest gap than an invented position.
+ */
 export function xgOf(e) {
+  if (e.noloc) return 0;
   if (e.pen) return PENALTY_XG;
   const { distance, angle } = shotGeometry(e);
   let g = 1 / (1 + Math.exp(-(COEF.intercept + COEF.distance * distance + COEF.angle * angle)));

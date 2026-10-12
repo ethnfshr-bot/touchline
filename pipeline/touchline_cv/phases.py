@@ -5,9 +5,10 @@ its own half; then everyone moves at once. The first kick-off of each half
 starts that half; every other kick-off is a restart after a goal, conceded by
 the team kicking off. Half-time is the longest spell without play.
 
-With pitch mapping and ball detections available (--pitch, --balls), goal
-restarts must also have the ball on the centre spot, and the conceding team is
-the one with a player nearest the spot.
+The conceding team (the one kicking off) is found on screen: the team of the
+player nearest the ball. With a reliable pitch calibration (--pitch), goal
+restarts must also have the ball on the centre spot. Follow-cam calibration
+isn't reliable yet, so the video tool doesn't pass --pitch for now.
 
     python -m touchline_cv.phases OUT_DIR --us "#1b2a4a" --them "#c8102e" \
         [--pitch OUT_DIR/pitch.npz --balls OUT_DIR/balls.npz]
@@ -120,24 +121,35 @@ def longest_gap(times, mask, lo, hi):
     return best
 
 
-def kicker_side(frame, persons, team, mapper):
-    """Team with a player nearest the centre spot at this frame, or None."""
-    if mapper is None:
-        return None
-    from .pitch import LENGTH, WIDTH
+def kicker_side(frame, persons, team, balls, window=8):
+    """Team kicking off: the team of the player nearest the ball on screen, just
+    before the kick-off. Works without pitch calibration.
 
-    best, bd = None, 1e9
-    for row in persons[persons[:, 0] == frame]:
-        side = team.get(int(row[2]))
-        if side not in ("us", "them"):
+    The ball is taken as the detection nearest the midpoint between the two
+    teams' centroids (the centre spot sits between them), which ignores spare
+    balls beside the pitch. Distances are in player-heights. Returns None if unclear.
+    """
+    if balls is None:
+        return None
+    votes = {"us": 0, "them": 0}
+    for f in range(frame - window * 2, frame + 1, 2):
+        rows = [r for r in persons[persons[:, 0] == f] if team.get(int(r[2])) in ("us", "them")]
+        cand = balls[(balls[:, 0] == f) & (balls[:, 6] >= 0.15)]
+        if len(rows) < 8 or not len(cand):
             continue
-        p = mapper.to_pitch(frame, (row[3] + row[5]) / 2, row[6])
-        if p is None:
-            continue
-        d = np.hypot(p[0] - LENGTH / 2, p[1] - WIDTH / 2)
-        if d < bd:
-            best, bd = side, d
-    return best if bd <= 6.0 else None
+        feet = np.array([((r[3] + r[5]) / 2, r[6]) for r in rows])
+        sides = [team[int(r[2])] for r in rows]
+        mid = np.mean([feet[[s == side for s in sides]].mean(axis=0) for side in ("us", "them") if side in sides], axis=0)
+        bc = np.c_[(cand[:, 2] + cand[:, 4]) / 2, (cand[:, 3] + cand[:, 5]) / 2]
+        ball = bc[np.argmin(np.hypot(*(bc - mid).T))]
+        heights = np.array([r[6] - r[4] for r in rows])
+        d = np.hypot(*(feet - ball).T) / np.maximum(heights, 8)
+        i = int(np.argmin(d))
+        if d[i] <= 1.5:
+            votes[sides[i]] += 1
+    if votes["us"] == votes["them"]:
+        return None
+    return max(votes, key=votes.get)
 
 
 def ball_on_spot(frame, balls, mapper, fps_frames=30):
@@ -192,7 +204,7 @@ def phases(sec, kicks, persons, team, mapper=None, balls=None):
         if spot is False:
             rejected.append({"t": t, "reason": "ball not on centre spot"})
             continue
-        side = kicker_side(f, persons, team, mapper)
+        side = kicker_side(f, persons, team, balls)
         goals.append({"t": t, "scored_by": {"us": "them", "them": "us"}.get(side), "ball_on_spot": spot})
     result["goals"] = goals
     result["rejected_kickoffs"] = rejected
@@ -216,7 +228,9 @@ def main():
     sec = per_second(D["persons"], team, motion, D["fps"])
     np.save(out / "per_second.npy", sec)
     kicks = find_kickoffs(sec)
-    mapper = balls = None
+    mapper = None
+    # Ball detections: the dedicated ball pass if given, else the tracking pass's own.
+    balls = D["balls"]
     if args.pitch:
         from .geometry import PitchMapper, camera_motion
 

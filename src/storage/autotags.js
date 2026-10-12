@@ -43,6 +43,7 @@ export function parseAutoTags(input) {
     if (!e || !isNum(e.vt) || e.vt < 0) fail(`${w} has an invalid video time.`);
     if (e.team !== 'us' && e.team !== 'them') fail(`${w} has an invalid team.`);
     if (!Object.prototype.hasOwnProperty.call(ACT, e.type)) fail(`${w} has an unknown type.`);
+    if (e.noloc) return;
     if (!isNum(e.x) || !isNum(e.y) || e.x < 0 || e.x > 100 || e.y < 0 || e.y > 100) fail(`${w} has an invalid position.`);
   });
   return d;
@@ -63,7 +64,9 @@ export function mergeAutoTags(match, auto, mkid) {
   if (s.ft != null) video.ft = s.ft;
   const kept = match.events.filter((e) => !e.auto);
   const added = auto.events.map((e) => {
-    const ev = { id: mkid(), t: 0, vt: e.vt, team: e.team, type: e.type, x: e.x, y: e.y, auto: 1 };
+    const ev = e.noloc
+      ? { id: mkid(), t: 0, vt: e.vt, team: e.team, type: e.type, x: 50, y: 50, noloc: 1, auto: 1 }
+      : { id: mkid(), t: 0, vt: e.vt, team: e.team, type: e.type, x: e.x, y: e.y, auto: 1 };
     if (isNum(e.conf)) ev.conf = Math.round(e.conf * 100) / 100;
     return ev;
   });

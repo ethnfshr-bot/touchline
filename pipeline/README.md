@@ -1,6 +1,6 @@
 # Touchline video tool
 
-Tags a match automatically from the video: kick-off, half-time, second-half kick-off, full-time, goals and shots. Work in progress; see **Accuracy** below for where it stands.
+Tags a match automatically from the video: kick-off, half-time, second-half kick-off, full-time and goals. Shots and team shape are in development. Work in progress; see **Accuracy** below for where it stands.
 
 ## Using it
 
@@ -55,6 +55,17 @@ Measured against hand-tagged matches in `groundtruth/`. Targets:
 | Goals | ≥ 95% found, near-zero false goals | not yet measured |
 | Shots | ≥ 80% found, ≤ 20% false | not yet measured with the current version |
 
-Known limits: shot outcome (saved / off target / blocked) isn't detected yet, so automatic shots use an outcome-unknown "Shot" type; which player shot isn't identified yet; follow-cam footage only shows part of the pitch at a time.
+### Pitch calibration on follow-cam video: not solved yet
+
+Shot locations (for xG) and team shape need every frame mapped onto the pitch. On Veo follow-cam footage this isn't reliable yet, so the video tool **doesn't produce shots or team shape for now** rather than produce wrong numbers. What was measured on Leeming v La Fammia:
+
+- Frames showing the half nearest the camera calibrate well: pitch markings fit to about 0.3 m.
+- At the far end, seen at a grazing angle, the (broadcast-trained) pitch model mislabels markings consistently. It claimed the right-hand penalty box five times as often as the left.
+- Carrying a calibration to other frames through the camera motion drifts: about 3 m after a few seconds, 20 m+ after a minute.
+- Veo's panorama view can't be downloaded, so follow-cam is the footage everyone has.
+
+Next steps: solve the camera's rotation and zoom for the whole match jointly (bundle adjustment of a rotating camera), fit one pitch calibration from all reliable markings, and fine-tune the pitch model on Veo frames. `touchline_cv.shots`, `.positional`, `.fuse` and `.checkcarry` remain for this work.
+
+Other known limits: shot outcome (saved / off target / blocked) isn't detected, so automatic shots will use an outcome-unknown "Shot" type; which player shot isn't identified; goals found from restarts have no pitch position, so they count for the score but not for xG.
 
 Keep match videos outside the repository; `*.mp4` and `*.mov` are git-ignored as a safety net.

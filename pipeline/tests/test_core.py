@@ -77,9 +77,11 @@ def test_export_turns_the_last_shot_before_a_goal_into_the_goal():
         {"vt": 970.0, "team": "us", "x": 80.0, "y": 50.0},
     ]
     out = build(phases, shots, "match.mp4")
-    types = [(e["vt"], e["team"], e["type"]) for e in out["events"]]
-    assert types == [(900.0, "them", "shot"), (960.0, "them", "goal"), (970.0, "us", "shot")]
-    # Our goal at 4000 s has no shot within 90 s, so it can't be placed.
-    assert out["generator"]["unplaced_goals"] == [{"t": 4000.0, "scored_by": "us"}]
+    types = [(e["vt"], e["team"], e["type"], e.get("noloc", False)) for e in out["events"]]
+    # Our goal at 4000 s has no shot within 90 s: kept as a goal without a position.
+    assert types == [(900.0, "them", "shot", False), (960.0, "them", "goal", False), (970.0, "us", "shot", False), (4000.0, "us", "goal", True)]
+    assert out["generator"]["unplaced_goals"] == []
+    unknown = build({"k1": 1.0, "goals": [{"t": 50.0, "scored_by": None}]}, [], "m.mp4")
+    assert unknown["generator"]["unplaced_goals"] == [{"t": 50.0, "scored_by": None}]
     assert out["sync"] == {"k1": 145.0, "k2": 3100.0, "ht": 2900.0, "ft": 6000.0}
     assert WIDTH == 68.0

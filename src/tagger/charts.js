@@ -60,7 +60,7 @@ export function xgRace(m) {
 }
 
 export function shotMap(m, onlyPid) {
-  const shots = m.events.filter((e) => isShot(e) && (!onlyPid || (e.team === 'us' && e.pid === onlyPid)));
+  const shots = m.events.filter((e) => isShot(e) && !e.noloc && (!onlyPid || (e.team === 'us' && e.pid === onlyPid)));
   const inner = shots
     .map((e) => {
       const p = toScreen(e.team, e.x, e.y);
@@ -93,7 +93,7 @@ export function thirdsSVG(m) {
 }
 
 export function heatmap(m, pid) {
-  const ev = m.events.filter((e) => e.team === 'us' && e.pid === pid);
+  const ev = m.events.filter((e) => e.team === 'us' && e.pid === pid && !e.noloc);
   const C = 12, R = 8;
   const g = Array.from({ length: R }, () => Array(C).fill(0));
   let mx = 0;

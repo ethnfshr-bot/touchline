@@ -6,7 +6,8 @@ import { xgOf } from './xg.js';
  * Data shapes (see CLAUDE.md for the full description):
  *   Player  { id, name, num, pos }                     pos is a POS group
  *   Match   { id, created, opp, date, comp, half, veo, formation, events[], minutes{}, lineup{} }
- *   Event   { id, t, team: 'us'|'them', type, x, y, pid?, ast?, header?, big?, pen? }
+ *   Event   { id, t, team: 'us'|'them', type, x, y, pid?, ast?, header?, big?, pen?, noloc?, auto? }
+ *           noloc: position unknown (x, y are placeholders): excluded from xG and location stats
  */
 
 /** [goals for, goals against]. */
@@ -41,7 +42,7 @@ export function teamStats(m, team) {
     passA,
     kp: ast,
     onball: ev.filter(isOn).length + ast,
-    ft: ev.filter((e) => isOn(e) && e.x >= 66.67).length,
+    ft: ev.filter((e) => isOn(e) && !e.noloc && e.x >= 66.67).length,
     tkl: c('tackle'),
     int: c('int'),
     rec: c('rec'),
@@ -61,7 +62,7 @@ export function teamStats(m, team) {
 export function thirds(m) {
   const z = [[0, 0], [0, 0], [0, 0]];
   m.events.forEach((e) => {
-    if (!isOn(e)) return;
+    if (!isOn(e) || e.noloc) return;
     const x = e.team === 'us' ? e.x : 100 - e.x;
     const i = x < 33.34 ? 0 : x < 66.67 ? 1 : 2;
     z[i][e.team === 'us' ? 0 : 1]++;

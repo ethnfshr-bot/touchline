@@ -26,6 +26,10 @@ describe('xgOf', () => {
     expect(xgOf({ x: 10, y: 90, pen: 1, header: 1 })).toBe(PENALTY_XG);
   });
 
+  it('gives shots with an unknown position no xG', () => {
+    expect(xgOf({ ...PEN_SPOT, noloc: 1 })).toBe(0);
+  });
+
   it('scales headers down', () => {
     expect(xgOf({ ...PEN_SPOT, header: 1 })).toBeCloseTo(XG_PEN_SPOT * 0.55, 10);
   });

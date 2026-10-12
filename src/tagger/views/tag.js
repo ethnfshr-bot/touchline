@@ -100,6 +100,7 @@ export function vTag() {
   }
   const [u, t] = score(m);
   const markers = m.events
+    .filter((e) => !e.noloc)
     .slice(-12)
     .map((e) => {
       const p = toScreen(e.team, e.x, e.y);
@@ -119,7 +120,7 @@ export function vTag() {
     .slice(0, 40)
     .map(
       (e) => `<li><span class="dot" style="background:${e.team === 'us' ? 'var(--us)' : 'var(--them)'}"></span>
-    ${videoActive() && typeof e.vt === 'number' ? `<button class="linkish" data-a="seek" data-n="${e.vt}" aria-label="Replay in video">${Math.floor(e.t / 60) + 1}'</button>` : `<span>${Math.floor(e.t / 60) + 1}'</span>`}<span>${e.auto ? '<span class="badge" title="Tagged automatically by the video tool">auto</span> ' : ''}${e.team === 'us' ? esc(pName(e.pid)) : 'Opposition'} · ${ACT[e.type].l}${isShot(e) ? ` <span class="muted">(${f2(xgOf(e))} xG${e.ast ? ', ast ' + esc(pName(e.ast)) : ''})</span>` : ''}</span>
+    ${videoActive() && typeof e.vt === 'number' ? `<button class="linkish" data-a="seek" data-n="${e.vt}" aria-label="Replay in video">${Math.floor(e.t / 60) + 1}'</button>` : `<span>${Math.floor(e.t / 60) + 1}'</span>`}<span>${e.auto ? '<span class="badge" title="Tagged automatically by the video tool">auto</span> ' : ''}${e.team === 'us' ? esc(pName(e.pid)) : 'Opposition'} · ${ACT[e.type].l}${e.noloc ? ' <span class="muted">(position unknown, not in xG)</span>' : ''}${isShot(e) && !e.noloc ? ` <span class="muted">(${f2(xgOf(e))} xG${e.ast ? ', ast ' + esc(pName(e.ast)) : ''})</span>` : ''}</span>
     <button class="x" data-a="delev" data-id="${esc(e.id)}" aria-label="Delete event">×</button></li>`,
     )
     .join('');

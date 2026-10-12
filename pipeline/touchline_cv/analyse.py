@@ -10,7 +10,6 @@ interrupted run picks up where it stopped), then writes
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -68,14 +67,14 @@ def main():
         run(module, str(video), "--out", str(work))
 
     print("[5/6] Detecting kick-offs, half-time, full-time and goals...", flush=True)
-    run("phases", str(work), "--us", us, "--them", them, "--pitch", str(work / "pitch.npz"), "--balls", str(work / "balls.npz"))
-    ph = json.loads((work / "phases.json").read_text())
-    kicks = [str(ph[k]) for k in ("k1", "k2") if ph.get(k) is not None]
-    print("[6/6] Detecting shots and measuring team shape...", flush=True)
-    if kicks:
-        common = ["--pitch", str(work / "pitch.npz"), "--balls", str(work / "balls.npz"), "--us", us, "--them", them, "--kickoffs", *kicks]
-        run("shots", str(work), *common)
-        run("positional", str(work), *common)
+    # No --pitch: follow-cam calibration isn't reliable yet (see README, Accuracy).
+    run("phases", str(work), "--us", us, "--them", them, "--balls", str(work / "balls.npz"))
+    # Shots and team shape need a reliable pitch calibration, which follow-cam
+    # footage doesn't have yet. They stay off rather than produce wrong numbers;
+    # run touchline_cv.shots / .positional by hand to experiment.
+    print("[6/6] Shots and team shape: not available yet for follow-cam video (see README).", flush=True)
+    for stale in ("shots_v2.json", "positional.json"):
+        (work / stale).unlink(missing_ok=True)
     dest = video.with_name(video.stem + ".touchline-auto.json")
     run("export", str(work), "--video", video.name, "--out", str(dest))
     print(f"\nDone. In Touchline, open the match, load this video, then press 'Add automatic tags' and choose:\n  {dest}")
