@@ -2,6 +2,8 @@
 
 **Mission:** be the best open-source app for amateur teams to measure performance accurately. Low-level football is especially prone to bias (memory, opinion, who shouts loudest), so prefer objective, reproducible measurements over subjective judgement, and always show how a number was produced. The end goal is finding tactics and informing strategy, so favour metrics a coach can act on.
 
+**Audience:** amateur coaches and players, not analysts or developers. Every feature must be usable without technical knowledge: plain-English labels, a one-line explanation next to every metric ("what this means, why it matters"), no jargon without a definition, sensible defaults, and nothing that requires a terminal for everyday use. The hosted site (GitHub Pages) is the main way people use it.
+
 Open-source tool for amateur 11-a-side teams: tag events from match video (Veo), get xG, FotMob-style player ratings and season tracking. Runs entirely in the browser; no backend. Licence: AGPL-3.0-or-later.
 
 ## Commands
@@ -43,14 +45,13 @@ Video  { source: 'file'|'youtube', name?, youtubeId?, k1?, k2? }   k1/k2 = video
 - Changing the stored data shape means bumping `SCHEMA_VERSION` and adding to `MIGRATIONS` in `storage/io.js`.
 - Tests live in `tests/`; shared fixtures in `tests/fixtures.js`. Reference xG values there are pinned to the current hand-tuned model.
 - UI copy: plain, friendly English for amateur players and coaches; no jargon without explanation.
+- Every stat shown to users needs an entry in `tagger/glossary.js` (what it is, why it matters), and its screen's `glossaryPanel([...])` must list it.
 
 ## Working agreements
 
 - The engine was ported from the prototype with exact numerical parity (verified on 500 random matches). Behaviour changes to xG or ratings go in **their own commits**, with the test changed in the same commit and the reason in the message.
-- Known prototype bugs, to be fixed as separate commits:
-  1. `minsOf` gives a player with no lineup entry or minutes override the full match, so a sub tagged once gets 90 minutes.
-  2. "Undo last" falls back to removing the chronologically last event, which isn't necessarily the last one tagged.
-  3. The rating doesn't scale with minutes played beyond the 10-minute cut-off.
+- Prototype bugs fixed since the port: minutes for players missing from a recorded lineup (`minsOf`), and undo removing the wrong event.
+- Open calibration question (phase 3, not a bug): ratings are match totals, like FotMob's, so short appearances can't accumulate much. Decide with data whether to adjust.
 
 ## Roadmap
 

@@ -1,7 +1,7 @@
 import { FORMS } from '../../engine/actions.js';
 import { score, sortedMatches } from '../../engine/stats.js';
 import { esc } from '../dom.js';
-import { matchList, ui } from '../state.js';
+import { matchList, roster, ui } from '../state.js';
 
 function dataPanel() {
   return `<div class="panel"><h2>Your data</h2>
@@ -11,6 +11,18 @@ function dataPanel() {
     <label class="btn">Import JSON<input type="file" id="importfile" accept="application/json,.json" hidden></label>
     <label class="small muted row" style="gap:.3rem"><input type="checkbox" id="import-replace"> Replace everything instead of merging</label>
   </div></div>`;
+}
+
+function gettingStarted(hasSquad) {
+  return `<details class="panel start" open><summary>Getting started</summary>
+  <ol class="steps">
+    <li>${hasSquad ? '✓ Squad added.' : 'Add your players under <b>Squad</b>, with their usual position.'}</li>
+    <li>Create a match below. Paste a YouTube link if the match is on YouTube.</li>
+    <li>On the <b>Tag</b> screen, load the video (a file from your computer or the YouTube link), pause at kick-off and press <b>Mark kick-off</b>.</li>
+    <li>As it plays, tap where each action happened on the pitch, then what it was. Space pauses the video.</li>
+    <li>Open <b>Report</b> after the match, and <b>Season</b> as matches build up. Each screen explains its numbers at the bottom.</li>
+  </ol>
+  <p class="hint">Everything stays in this browser. Use <b>Export all data</b> below to back up or share with a teammate.</p></details>`;
 }
 
 export function vMatches() {
@@ -25,7 +37,7 @@ export function vMatches() {
     <button class="btn danger" data-a="delmatch" data-id="${esc(m.id)}">${ui.armed === 'm' + m.id ? 'Tap again' : 'Delete'}</button></div></div>`;
     })
     .join('');
-  return `<div class="panel"><h2>New match</h2>
+  return `${list.length ? '' : gettingStarted(roster().length > 0)}<div class="panel"><h2>New match</h2>
   <div class="row">
     <label class="f">Opponent<input type="text" id="nm-opp" placeholder="e.g. Boulder FC"></label>
     <label class="f">Date<input type="date" id="nm-date" value="${new Date().toISOString().slice(0, 10)}"></label>

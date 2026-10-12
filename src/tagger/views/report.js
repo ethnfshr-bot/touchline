@@ -3,6 +3,7 @@ import { posPlayed, score, sortedMatches, teamStats } from '../../engine/stats.j
 import { f2 } from '../../engine/util.js';
 import { cmpRow, heatmap, rateBadge, shotMap, thirdsSVG, xgRace } from '../charts.js';
 import { esc } from '../dom.js';
+import { glossaryPanel } from '../glossary.js';
 import { matchList, roster, store, ui } from '../state.js';
 
 const pct = (a, b) => (b ? Math.round((a / b) * 100) + '%' : '–');
@@ -80,5 +81,6 @@ export function vReport() {
     </div>
   </div>
   <div class="panel"><h3>Player ratings</h3>${ps.length ? ratingsTable(m, ps, best) : '<p class="muted">Credit tagged actions to squad players to see ratings.</p>'}</div>
-  ${fx ? focusPanel(m, fx) : ''}`;
+  ${fx ? focusPanel(m, fx) : ''}
+  ${glossaryPanel(['xg', 'race', 'sot', 'big', 'poss', 'tilt', 'ft', 'thirds', 'kp', 'xa', 'rating'])}`;
 }
