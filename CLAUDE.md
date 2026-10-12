@@ -19,6 +19,19 @@ Open-source tool for amateur 11-a-side teams: tag events from match video (Veo),
 - `src/tagger/`: UI. `state.js` holds `store.data` (persisted) and `ui` (transient). Views in `views/` return HTML strings; `render()` replaces `#app`'s innerHTML on every change. All clicks go through one delegated handler in `events.js`, keyed on `data-a` attributes.
 - `prototype/touchline.html`: original claude.ai prototype. Reference only, not built.
 
+## Video pipeline (`pipeline/`)
+
+Python 3.12 + Ultralytics, run locally on the user's NVIDIA GPU. Entry point for users: drag a video onto `pipeline/Analyse match.bat` (runs `touchline_cv.analyse`). Output: `<video>.touchline-auto.json`, added in the app's Tag screen (`src/storage/autotags.js`).
+
+- Passes write to a work folder and are skipped if their output exists: `track` (YOLO11m persons + ByteTrack + shirt colour per box, `tracks.npz`), `camera` (frame-to-frame full homographies, CPU, `camera.npz`), `pitch` (Roboflow pitch-keypoint model + RANSAC homography once a second, `pitch.npz`), `ballpass` (Roboflow ball model, `balls.npz`).
+- All passes sample the **same absolute frame grid** (stride = round(src_fps / 15), starting at a multiple of the stride) so arrays join on frame number.
+- Analysis (fast, rerunnable): `phases` (kick-offs/half-time/full-time/goals), `shots` (pitch-coordinate shot detection), `positional` (team shape), `export`.
+- Pitch coordinates are metres, x along the length from the left goal line, y from the far touchline, default 105 x 68 with regulation markings. Roboflow's own template has a 20.15 m penalty box; don't use it.
+- Veo follow-cam = virtual camera rotating inside a fixed panorama, so frame-to-frame motion is an exact homography; `geometry.PitchMapper` carries pitch calibrations across frames with it.
+- Model choices are benchmarked on real footage (`bench.py`) before adoption; record the numbers in the module docstring. Stock COCO ball detection mistakes spare balls beside the pitch for the match ball; always filter to on-pitch.
+- Ground truth lives in `pipeline/groundtruth/`; never claim accuracy without measuring against it.
+- Weights and videos are never committed (`*.pt`, `*.onnx`, `*.mp4` are git-ignored). Tests: `pipeline\.venv\Scripts\python -m pytest pipeline/tests`.
+
 ## Data model
 
 ```
