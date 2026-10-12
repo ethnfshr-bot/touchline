@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# Python pipeline
+.venv/
+__pycache__/
+*.pyc
+pipeline/out/
+*.pt
+*.mp4
+*.mov
+

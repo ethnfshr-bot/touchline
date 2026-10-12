@@ -1,0 +1,20 @@
+{
+  "name": "touchline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-source match tagging, xG and FotMob-style player ratings for amateur 11-a-side teams.",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}

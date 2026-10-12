@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Touchline</title>
+<meta name="description" content="Open-source match tagging, xG and player ratings for amateur football teams.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="top">
+  <div class="bar"><span class="brand">Touchline</span><span class="status" id="status">Loading…</span></div>
+  <nav id="nav">
+    <button data-a="view" data-v="matches">Matches</button>
+    <button data-a="view" data-v="tag">Tag</button>
+    <button data-a="view" data-v="report">Report</button>
+    <button data-a="view" data-v="season">Season</button>
+    <button data-a="view" data-v="squad">Squad</button>
+  </nav>
+  <div class="player" id="player" hidden><div class="player-host" id="player-host"></div></div>
+</div>
+<main id="app"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
