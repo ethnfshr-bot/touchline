@@ -1,4 +1,5 @@
 import { matchRatings } from '../../engine/rating.js';
+import { matchSummary } from '../../engine/summary.js';
 import { posPlayed, score, sortedMatches, teamStats } from '../../engine/stats.js';
 import { f2 } from '../../engine/util.js';
 import { cmpRow, heatmap, rateBadge, shotMap, thirdsSVG, xgRace } from '../charts.js';
@@ -91,9 +92,11 @@ export function vReport() {
     .join('')}</select>`;
   const passes = (s) => (s.passA ? `${s.passC} (${Math.round((s.passC / s.passA) * 100)}%)` : '0');
 
-  return `<div class="panel">${sel}
+  const story = matchSummary(m, roster(), m.opp || 'the opposition');
+  return `<div class="panel"><div class="row noprint">${sel}<button class="btn" data-a="print" title="Print, or choose 'Save as PDF' to share">Print / PDF</button></div>
     <div class="scoreline" style="margin-top:1rem"><div><div class="t">Us</div><div class="xg">${f2(A.xg)} xG</div></div>
-    <div class="s">${u}–${t}</div><div><div class="t">${opp}</div><div class="xg">${f2(B.xg)} xG</div></div></div></div>
+    <div class="s">${u}–${t}</div><div><div class="t">${opp}</div><div class="xg">${f2(B.xg)} xG</div></div></div>
+    ${story.length ? `<div class="story">${story.map((s) => `<p>${esc(s)}</p>`).join('')}</div>` : ''}</div>
   <div class="grid2">
     <div class="panel"><h3>xG race</h3>${xgRace(m)}<div class="legend"><span><i class="dot" style="background:var(--us)"></i>Us</span><span><i class="dot" style="background:var(--them)"></i>${opp}</span><span>Large dots are goals</span></div></div>
     <div class="panel"><h3>Shot map</h3><div class="pitchwrap">${shotMap(m)}</div><div class="legend"><span>Bigger circle, higher xG</span><span>Filled: goal</span><span>Pale: saved</span></div></div>

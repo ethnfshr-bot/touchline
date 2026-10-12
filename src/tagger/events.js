@@ -340,6 +340,9 @@ function onClick(evt) {
     case 'export':
       exportJSON();
       break;
+    case 'print':
+      window.print();
+      break;
   }
 }
 
