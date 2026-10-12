@@ -1,0 +1,5 @@
+# Install PyTorch for your GPU first, e.g. for NVIDIA (CUDA 12.8):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# then:
+ultralytics>=8.3
+scikit-learn>=1.5

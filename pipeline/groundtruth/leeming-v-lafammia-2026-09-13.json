@@ -1,0 +1,15 @@
+{
+  "match": "Leeming SC vs La Fammia SC (firsts), 2026-09-13",
+  "video": "leeming-sc-vs-la-fammia-sc-firsts-2026-09-13.mp4",
+  "us": "Leeming SC (navy)",
+  "them": "La Fammia SC (red and white stripes)",
+  "kickoff_video_seconds": 145,
+  "windows": [
+    {
+      "match_minutes": [0, 11],
+      "shots": { "us": 1, "them": 3 },
+      "goals": { "us": 0, "them": 0 },
+      "source": "hand count by the user, 2026-10-12"
+    }
+  ]
+}
