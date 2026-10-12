@@ -76,3 +76,5 @@ Next: (1) project every marking into every frame from the match-wide calibration
 Other known limits: shot outcome (saved / off target / blocked) isn't detected, so automatic shots will use an outcome-unknown "Shot" type; which player shot isn't identified; goals found from restarts have no pitch position, so they count for the score but not for xG.
 
 Keep match videos outside the repository; `*.mp4` and `*.mov` are git-ignored as a safety net.
+
+Tried and ruled out (2026-10-13): one shared focal length for all keyframes (3.75 px, still ~20 degrees off over 21 minutes), so zoom/rotation trade-off isn't the main cause. Note: on the 21-minute window the first (sequential-only) solve doesn't move from its starting point (22.9 px); debug the initialisation before more modelling.

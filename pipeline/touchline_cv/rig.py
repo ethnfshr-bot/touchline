@@ -101,29 +101,37 @@ def project(params, n, cx, cy, ia, ib, ua):
     return np.c_[f[ib] * cam[:, 0] / cam[:, 2] + cx, f[ib] * cam[:, 1] / cam[:, 2] + cy]
 
 
-def solve(n, pairs, R0, f0, cx, cy, max_nfev=60):
+def solve(n, pairs, R0, f0, cx, cy, max_nfev=60, shared_focal=False):
+    """Bundle adjustment. With shared_focal, one focal length for all keyframes
+    (removes the zoom/rotation trade-off at the cost of ignoring real zoom)."""
     ia = np.concatenate([np.full(len(p[2]), p[0]) for p in pairs])
     ib = np.concatenate([np.full(len(p[2]), p[1]) for p in pairs])
     ua = np.vstack([p[2] for p in pairs])
     ub = np.vstack([p[3] for p in pairs])
-    x0 = np.r_[np.vstack([Rotation.from_matrix(r).as_rotvec() for r in R0]).ravel(), np.full(n, np.log(f0))]
+    rot0 = np.vstack([Rotation.from_matrix(r).as_rotvec() for r in R0]).ravel()
+    nf = 1 if shared_focal else n
+    x0 = np.r_[rot0, np.full(nf, np.log(f0))]
+
+    def full(p):
+        return p if not shared_focal else np.r_[p[: 3 * n], np.full(n, p[3 * n])]
 
     def resid(p):
-        return (project(p, n, cx, cy, ia, ib, ua) - ub).ravel()
+        return (project(full(p), n, cx, cy, ia, ib, ua) - ub).ravel()
 
     m = len(ua)
-    S = lil_matrix((2 * m, 4 * n), dtype=np.int8)
+    S = lil_matrix((2 * m, 3 * n + nf), dtype=np.int8)
     rows = np.arange(m)
     for cam_idx in (ia, ib):
         for k in range(3):
             S[2 * rows, 3 * cam_idx + k] = 1
             S[2 * rows + 1, 3 * cam_idx + k] = 1
-        S[2 * rows, 3 * n + cam_idx] = 1
-        S[2 * rows + 1, 3 * n + cam_idx] = 1
+        fcol = 3 * n if shared_focal else 3 * n + cam_idx
+        S[2 * rows, fcol] = 1
+        S[2 * rows + 1, fcol] = 1
     r0 = np.abs(resid(x0))
     sol = least_squares(resid, x0, jac_sparsity=S, loss="huber", f_scale=3.0, x_scale="jac", max_nfev=max_nfev, verbose=0)
     r1 = np.abs(sol.fun)
-    return sol.x, float(np.median(r0)), float(np.median(r1))
+    return full(sol.x), float(np.median(r0)), float(np.median(r1))
 
 
 def forward_vectors(params, n):
@@ -172,6 +180,7 @@ def main():
     ap.add_argument("--to", dest="t1", type=float, default=1e9)
     ap.add_argument("--loop-every", type=int, default=30, help="keyframes between loop-closure landmarks (0 = none)")
     ap.add_argument("--max-nfev", type=int, default=200)
+    ap.add_argument("--shared-focal", action="store_true", help="one focal length for all keyframes")
     ap.add_argument("--loop-tolerance", type=float, default=60.0, help="max median px error for a loop closure to be trusted")
     args = ap.parse_args()
     out = Path(args.out)
@@ -218,7 +227,7 @@ def main():
 
     f0 = width / (2 * np.tan(np.radians(60) / 2))  # ~60 degree horizontal field of view to start
     R0 = init_from_chain(n, pair_H, cx, cy, f0)
-    params, before, after = solve(n, pairs, R0, f0, cx, cy, args.max_nfev)
+    params, before, after = solve(n, pairs, R0, f0, cx, cy, args.max_nfev, args.shared_focal)
     print(f"sequential solve: median residual {before:.1f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
 
     # Loop closures: only between keyframes facing the same way, and only if the
@@ -242,7 +251,7 @@ def main():
         if loops:
             R1 = [Rotation.from_rotvec(r).as_matrix() for r in params[: 3 * n].reshape(n, 3)]
             f1 = float(np.exp(np.median(params[3 * n :])))
-            params, b2, after = solve(n, pairs, R1, f1, cx, cy, args.max_nfev)
+            params, b2, after = solve(n, pairs, R1, f1, cx, cy, args.max_nfev, args.shared_focal)
             print(f"solve with loops: {b2:.2f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
 
     rv = params[: 3 * n].reshape(n, 3)
