@@ -16,3 +16,4 @@ pipeline/out/
 
 *.onnx
 pipeline/models/
+runs/

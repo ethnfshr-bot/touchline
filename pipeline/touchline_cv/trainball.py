@@ -33,14 +33,14 @@ def main():
     model = YOLO(args.base)
     res = model.train(
         data=str(data), imgsz=args.imgsz, epochs=args.epochs, batch=args.batch, patience=15,
-        project=str(Path(args.data_dir) / "runs"), name="ball", exist_ok=True,
+        project=str((Path(args.data_dir) / "runs").resolve()), name="ball", exist_ok=True,
         # Football-friendly augmentation: no vertical flips (the sky is always up),
         # mild scale changes, mosaic helps with small objects.
         flipud=0.0, fliplr=0.5, scale=0.3, mosaic=1.0, close_mosaic=10, plots=False, verbose=False,
         # Windows: multi-process data loading crashed inside cv2.resize; load in-process.
         workers=args.workers,
     )
-    best = Path(res.save_dir) / "weights" / "best.pt"
+    best = Path(model.trainer.save_dir) / "weights" / "best.pt"
     MODELS.mkdir(exist_ok=True)
     shutil.copy(best, MODELS / "touchline-ball.pt")
     metrics = YOLO(str(best)).val(data=str(data), imgsz=args.imgsz, batch=args.batch, workers=args.workers, verbose=False)
