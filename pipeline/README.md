@@ -1,10 +1,19 @@
-# Touchline video pipeline
+# Touchline video tool
 
-Turns a match video into Touchline events automatically. Work in progress: the first target is **shots and goals**.
+Tags a match automatically from the video: kick-off, half-time, second-half kick-off, full-time, goals and shots. Work in progress; see **Accuracy** below for where it stands.
 
-## Setup (Windows)
+## Using it
 
-Needs Python 3.12 and, for reasonable speed, an NVIDIA GPU.
+1. Drag a match video (MP4) onto **`Analyse match.bat`**.
+2. Type your team's shirt colour and the opposition's (e.g. `navy`, `red`, `white`).
+3. Leave it running. It takes roughly as long as the video on a computer with an NVIDIA graphics card. If it stops, run it again; finished steps are skipped.
+4. When it says **Done**, open the match in Touchline, load the same video on the Tag screen, press **Add automatic tags** and choose the `.touchline-auto.json` file it made next to the video.
+
+Automatic tags show an **auto** badge in the event log. Check them against the video; you can delete or add tags as normal. Re-adding automatic tags replaces the old automatic ones and keeps everything you tagged by hand.
+
+## Setup (once, Windows)
+
+Needs Python 3.12 and an NVIDIA graphics card (a CPU works but is very slow).
 
 ```powershell
 cd pipeline
@@ -13,20 +22,39 @@ py -3.12 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 ```
 
-Model weights download automatically on first run and are not committed.
+Then download the football models into `pipeline/models/` (from the [Roboflow sports](https://github.com/roboflow/sports) project, MIT-licensed code; weights trained with Ultralytics, AGPL-3.0):
 
-## Tools
+```powershell
+.venv\Scripts\gdown -O models/rf-ball.pt "https://drive.google.com/uc?id=1isw4wx-MK9h9LMr36VvIWlJD6ppUvw7V"
+.venv\Scripts\gdown -O models/rf-pitch.pt "https://drive.google.com/uc?id=1Ma5Kt86tgpdjCTKfum79YMgNnSjcoOyf"
+```
 
-- `python -m touchline_cv.probe VIDEO`: samples frames across a match and reports how often players and the ball are detected, saving annotated frames to `pipeline/out/probe/`.
+The general-purpose YOLO11 model downloads itself on first run.
 
-## Accuracy targets
+## How it works
 
-Measured against a hand-tagged match:
+| Step | Module | What it does |
+|---|---|---|
+| 1 | `track` | Finds people with YOLO11 and follows them with ByteTrack; records each player's shirt colour. |
+| 2 | `camera` | Measures how the camera turns and zooms between frames (Veo's follow-cam is a virtual camera inside a fixed panorama, so frames are related by exact homographies). |
+| 3 | `pitch` | Finds pitch markings (Roboflow pitch-keypoint model) and works out where the pitch is, using regulation line dimensions. Calibrations are carried to other frames through the camera motion. |
+| 4 | `ballpass` | Finds the ball with a football-specific model. |
+| 5 | `phases` | Kick-offs (players still, teams in their own halves, then everyone moves), half-time (longest spell without play), full-time, and goals (every other kick-off is a restart after a goal). |
+| 6 | `shots` | A fast ball leaving a player's feet, within 35 m of the goal they're attacking, on a path towards the goal mouth. |
+| – | `export` | Writes the automatic tags file. |
 
-| Event | Target |
-|---|---|
-| Goals | ≥ 95% found, near-zero false goals |
-| Shots | ≥ 80% found, ≤ 20% false |
-| Shot location | within ~3 m |
+Tools for development: `probe` (detection rates), `bench` (compare models on frames), `sheet` (contact sheets of frames around a moment), `pseudolabel` (build a training set for a custom ball detector).
+
+## Accuracy
+
+Measured against hand-tagged matches in `groundtruth/`. Targets:
+
+| Event | Target | Current |
+|---|---|---|
+| Kick-off | within 5 s | 2:24.98 vs 2:25 on the one match tested |
+| Goals | ≥ 95% found, near-zero false goals | not yet measured |
+| Shots | ≥ 80% found, ≤ 20% false | not yet measured with the current version |
+
+Known limits: shot outcome (saved / off target / blocked) isn't detected yet, so automatic shots use an outcome-unknown "Shot" type; which player shot isn't identified yet; follow-cam footage only shows part of the pitch at a time.
 
 Keep match videos outside the repository; `*.mp4` and `*.mov` are git-ignored as a safety net.
