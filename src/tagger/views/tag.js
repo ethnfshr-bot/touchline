@@ -119,7 +119,7 @@ export function vTag() {
     .slice(0, 40)
     .map(
       (e) => `<li><span class="dot" style="background:${e.team === 'us' ? 'var(--us)' : 'var(--them)'}"></span>
-    ${videoActive() && typeof e.vt === 'number' ? `<button class="linkish" data-a="seek" data-n="${e.vt}" aria-label="Replay in video">${Math.floor(e.t / 60) + 1}'</button>` : `<span>${Math.floor(e.t / 60) + 1}'</span>`}<span>${e.team === 'us' ? esc(pName(e.pid)) : 'Opposition'} · ${ACT[e.type].l}${isShot(e) ? ` <span class="muted">(${f2(xgOf(e))} xG${e.ast ? ', ast ' + esc(pName(e.ast)) : ''})</span>` : ''}</span>
+    ${videoActive() && typeof e.vt === 'number' ? `<button class="linkish" data-a="seek" data-n="${e.vt}" aria-label="Replay in video">${Math.floor(e.t / 60) + 1}'</button>` : `<span>${Math.floor(e.t / 60) + 1}'</span>`}<span>${e.auto ? '<span class="badge" title="Tagged automatically by the video tool">auto</span> ' : ''}${e.team === 'us' ? esc(pName(e.pid)) : 'Opposition'} · ${ACT[e.type].l}${isShot(e) ? ` <span class="muted">(${f2(xgOf(e))} xG${e.ast ? ', ast ' + esc(pName(e.ast)) : ''})</span>` : ''}</span>
     <button class="x" data-a="delev" data-id="${esc(e.id)}" aria-label="Delete event">×</button></li>`,
     )
     .join('');
@@ -132,7 +132,11 @@ export function vTag() {
       : '';
   return `<div class="panel"><div class="row" style="justify-content:space-between">
     <div><h2 style="margin:0">${u}–${t} vs ${esc(m.opp || 'Opponent')}</h2><div class="muted small">${esc(m.date || '')}${m.comp ? ' · ' + esc(m.comp) : ''}</div></div>${veo}</div>
-    ${clockPanel(m)}</div>
+    ${clockPanel(m)}
+    <div class="vidrow">
+      <label class="btn">Add automatic tags<input type="file" id="autofile" accept="application/json,.json" hidden></label>
+      <span class="hint" style="margin:0">${m.autoInfo ? `${m.autoInfo.count} automatic tags added. ` : ''}From the Touchline video tool. Replaces earlier automatic tags; your own tags are kept.</span>
+    </div></div>
   ${lineupPanel(m)}
   <div class="grid2">
   <div>

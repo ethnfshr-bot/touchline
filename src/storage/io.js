@@ -48,6 +48,7 @@ function checkVideo(v, where) {
   if (v.source !== 'file' && v.source !== 'youtube') fail(`${where} has an unknown video source.`);
   if (v.source === 'youtube' && !isYouTubeId(v.youtubeId)) fail(`${where} has an invalid YouTube video id.`);
   if (!optTime(v.k1) || !optTime(v.k2)) fail(`${where} has invalid kick-off times.`);
+  if (!optTime(v.ht) || !optTime(v.ft)) fail(`${where} has invalid half-time or full-time marks.`);
 }
 
 /**

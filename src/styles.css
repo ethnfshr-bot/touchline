@@ -123,3 +123,4 @@ td input[type=number]{width:4rem;padding:.2rem .3rem;text-align:right}
 .steps{margin:.4rem 0 0;padding-left:1.3rem}
 .steps li{margin:.35rem 0}
 [title]{text-decoration-style:dotted}
+.badge{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;color:var(--muted);vertical-align:1px}

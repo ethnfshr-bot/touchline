@@ -5,6 +5,7 @@ import { clamp, f2 } from '../engine/util.js';
 import { parseYouTubeId } from '../engine/videosource.js';
 import { retimeEvents } from '../engine/videotime.js';
 import { xgOf } from '../engine/xg.js';
+import { AutoTagError, mergeAutoTags, parseAutoTags } from '../storage/autotags.js';
 import { ImportError, mergeData, parseImport, toExport } from '../storage/io.js';
 import { clock, fmt, nowSec, parseClock, setClock } from './clock.js';
 import { $, downloadFile, mkid, toast } from './dom.js';
@@ -101,6 +102,24 @@ async function importJSON(input) {
   } catch (e) {
     toast(e instanceof ImportError ? e.message : "Couldn't import that file.");
     if (!(e instanceof ImportError)) console.error(e);
+  }
+}
+
+async function importAutoTags(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  const m = store.data.matches[ui.active];
+  if (!file || !m) return;
+  try {
+    const auto = parseAutoTags(await file.text());
+    const merged = mergeAutoTags(m, auto, mkid);
+    store.data.matches[m.id] = merged;
+    saveMatch(m.id);
+    render();
+    toast(`Added ${merged.autoInfo.count} automatic tags`, 3000);
+  } catch (e) {
+    toast(e instanceof AutoTagError ? e.message : "Couldn't read that file.", 5000);
+    if (!(e instanceof AutoTagError)) console.error(e);
   }
 }
 
@@ -338,6 +357,7 @@ function onChange(evt) {
     return;
   }
   if (t.id === 'importfile') return importJSON(t);
+  if (t.id === 'autofile') return importAutoTags(t);
   if (t.id === 'videofile') {
     const file = t.files && t.files[0];
     const m = store.data.matches[ui.active];
