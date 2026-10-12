@@ -79,4 +79,4 @@ Other known limits: shot outcome (saved / off target / blocked) isn't detected, 
 
 Keep match videos outside the repository; `*.mp4` and `*.mov` are git-ignored as a safety net.
 
-Tried and ruled out (2026-10-13): one shared focal length for all keyframes (3.75 px, still ~20 degrees off over 21 minutes), so zoom/rotation trade-off isn't the main cause. Note: on the 21-minute window the first (sequential-only) solve doesn't move from its starting point (22.9 px); debug the initialisation before more modelling.
+Tried and ruled out (2026-10-13): one shared focal length for all keyframes (3.75 px, still ~20 degrees off over 21 minutes), so zoom/rotation trade-off isn't the main cause. The stalled first solve was fixed (initialisation now skips unmatched keyframes; no Jacobian-based scaling): 23.7 -> 3.1 px sequential, 264 loop closures accepted, 2.8 px final. The 21-minute calibration test is unchanged (~19 degrees), so the camera solve wasn't the cause. Open questions: does Veo's follow-cam shift its image centre when re-framing (not a pure rotation over long spells)? Are later keypoint detections worse? Test on more matches.

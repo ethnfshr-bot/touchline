@@ -73,20 +73,27 @@ def K(f, cx, cy):
 
 
 def init_from_chain(n, pair_H, cx, cy, f0):
-    """Initial rotations by chaining sequential pairwise homographies."""
+    """Initial rotations by chaining pairwise homographies.
+
+    Uses the nearest earlier keyframe with a match (up to 3 back), so one
+    unmatched keyframe (a blurred fast pan) doesn't throw every later one off.
+    """
+    Kf = K(f0, cx, cy)
+    Kinv = np.linalg.inv(Kf)
     R = [np.eye(3)]
     for i in range(1, n):
-        H = pair_H.get((i - 1, i))
-        if H is None:
+        for d in (1, 2, 3):
+            H = pair_H.get((i - d, i))
+            if H is not None:
+                Rab = Kinv @ H @ Kf
+                U, _, Vt = np.linalg.svd(Rab)
+                Rab = U @ Vt
+                if np.linalg.det(Rab) < 0:
+                    Rab = -Rab
+                R.append(Rab @ R[i - d])  # R_b = R_ab R_a
+                break
+        else:
             R.append(R[-1].copy())
-            continue
-        Ka = Kb = K(f0, cx, cy)
-        Rab = np.linalg.inv(Kb) @ H @ Ka
-        U, _, Vt = np.linalg.svd(Rab)
-        Rab = U @ Vt
-        if np.linalg.det(Rab) < 0:
-            Rab = -Rab
-        R.append(Rab @ R[-1])  # R_b = R_ab R_a
     return R
 
 
@@ -129,7 +136,9 @@ def solve(n, pairs, R0, f0, cx, cy, max_nfev=60, shared_focal=False):
         S[2 * rows, fcol] = 1
         S[2 * rows + 1, fcol] = 1
     r0 = np.abs(resid(x0))
-    sol = least_squares(resid, x0, jac_sparsity=S, loss="huber", f_scale=3.0, x_scale="jac", max_nfev=max_nfev, verbose=0)
+    # x_scale=1: with "jac" scaling, keyframes that have no matches give all-zero
+    # Jacobian columns and the solver stalled at its starting point.
+    sol = least_squares(resid, x0, jac_sparsity=S, loss="huber", f_scale=3.0, x_scale=1.0, max_nfev=max_nfev, verbose=0)
     r1 = np.abs(sol.fun)
     return full(sol.x), float(np.median(r0)), float(np.median(r1))
 
