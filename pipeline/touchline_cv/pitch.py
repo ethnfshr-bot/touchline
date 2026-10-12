@@ -5,10 +5,13 @@ halfway line and centre circle) with the Roboflow `sports` pitch model
 (MIT code; weights trained with Ultralytics, AGPL-3.0), fits a homography with
 RANSAC so mislabelled points are outvoted, and stores one per sampled second.
 
-Pitch coordinates follow the model's template: metres, x along the length
-(0 at the left goal line), y across (0 at the far touchline), on a 120 x 70 m
-template. Touchline converts to its 0-100 frame by dividing by length/width,
-so pitches of other sizes map proportionally.
+Pitch coordinates are metres: x along the length (0 at the left goal line),
+y across (0 at the far touchline). The markings use regulation dimensions
+(16.5 m penalty box, 5.5 m goal box, spot at 11 m, 9.15 m centre circle).
+Roboflow's own template uses a 20.15 m penalty box, which made box keypoints
+contradict each other by 3-4 m and broke almost every fit. Overall length and
+width vary by ground (default 105 x 68 m); only corner and halfway-line points
+depend on them.
 
     python -m touchline_cv.pitch VIDEO --out OUT_DIR [--every 1.0]
 Output: OUT_DIR/pitch.npz with arrays
@@ -28,11 +31,13 @@ from ultralytics import YOLO
 
 MODELS = Path(__file__).resolve().parents[1] / "models"
 
-LENGTH, WIDTH = 120.0, 70.0
-_PB_W, _PB_L, _GB_W, _GB_L, _CC_R, _PS = 41.0, 20.15, 18.32, 5.5, 9.15, 11.0
+LENGTH, WIDTH = 105.0, 68.0
+_PB_W, _PB_L, _GB_W, _GB_L, _CC_R, _PS = 40.32, 16.5, 18.32, 5.5, 9.15, 11.0
 
-# Template vertices in metres, in the model's keypoint order (0-based).
-VERTICES = np.array([
+
+def vertices(LENGTH: float = LENGTH, WIDTH: float = WIDTH) -> np.ndarray:
+    """Keypoint positions in metres, in the model's keypoint order (0-based)."""
+    return np.array([
     (0, 0), (0, (WIDTH - _PB_W) / 2), (0, (WIDTH - _GB_W) / 2), (0, (WIDTH + _GB_W) / 2),
     (0, (WIDTH + _PB_W) / 2), (0, WIDTH), (_GB_L, (WIDTH - _GB_W) / 2), (_GB_L, (WIDTH + _GB_W) / 2),
     (_PS, WIDTH / 2), (_PB_L, (WIDTH - _PB_W) / 2), (_PB_L, (WIDTH - _GB_W) / 2), (_PB_L, (WIDTH + _GB_W) / 2),
@@ -42,7 +47,10 @@ VERTICES = np.array([
     (LENGTH - _GB_L, (WIDTH - _GB_W) / 2), (LENGTH - _GB_L, (WIDTH + _GB_W) / 2), (LENGTH, 0),
     (LENGTH, (WIDTH - _PB_W) / 2), (LENGTH, (WIDTH - _GB_W) / 2), (LENGTH, (WIDTH + _GB_W) / 2),
     (LENGTH, (WIDTH + _PB_W) / 2), (LENGTH, WIDTH), (LENGTH / 2 - _CC_R, WIDTH / 2), (LENGTH / 2 + _CC_R, WIDTH / 2),
-], dtype=np.float64)
+    ], dtype=np.float64)
+
+
+VERTICES = vertices()
 
 
 def fit_homography(pts_img: np.ndarray, idx: np.ndarray, thresh_m: float = 1.5):

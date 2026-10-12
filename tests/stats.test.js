@@ -42,6 +42,13 @@ describe('teamStats', () => {
     expect(us.int).toBe(1);
   });
 
+  it('counts an outcome-unknown automatic shot as a shot but not on target', () => {
+    const s = teamStats(makeMatch({ events: [ev('us', 'shot', { x: 89.5238, y: 50 })] }), 'us');
+    expect(s.shots).toBe(1);
+    expect(s.sot).toBe(0);
+    expect(s.xg).toBeCloseTo(XG_PEN_SPOT, 10);
+  });
+
   it('counts big chances missed', () => {
     const mm = makeMatch({ events: [ev('us', 'off', { big: 1 }), ev('us', 'goal', { big: 1 })] });
     const s = teamStats(mm, 'us');

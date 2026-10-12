@@ -71,7 +71,7 @@ function actionButtons() {
   const dis = ui.mark ? '' : 'disabled';
   return GROUPS.map(([g, gl]) => {
     const btns = Object.entries(ACT)
-      .filter(([, a]) => a.g === g)
+      .filter(([, a]) => a.g === g && !a.auto)
       .map(([k, a]) => `<button class="act ${g === 'shot' ? 'shot' : ''}" data-a="log" data-t="${k}" ${dis}>${a.l}</button>`)
       .join('');
     const mods =

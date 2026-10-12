@@ -4,12 +4,15 @@
  *   g    button group: 'shot' | 'ball' | 'def'
  *   on   counts as an on-the-ball action (possession, touches, field tilt)
  *   shot counts as a shot (xG, shot map)
+ *   auto produced by automatic tagging only; no tagging button
  */
 export const ACT = {
   goal: { l: 'Goal', g: 'shot', on: 1, shot: 1 },
   saved: { l: 'Saved', g: 'shot', on: 1, shot: 1 },
   off: { l: 'Off target', g: 'shot', on: 1, shot: 1 },
   blocked: { l: 'Blocked', g: 'shot', on: 1, shot: 1 },
+  // Outcome unknown: used by automatic tagging when it can't tell saved/off/blocked apart.
+  shot: { l: 'Shot', g: 'shot', on: 1, shot: 1, auto: 1 },
   pass: { l: 'Pass', g: 'ball', on: 1 },
   passlost: { l: 'Pass lost', g: 'ball', on: 1 },
   touch: { l: 'Touch', g: 'ball', on: 1 },

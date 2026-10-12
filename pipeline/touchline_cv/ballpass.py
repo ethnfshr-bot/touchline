@@ -43,7 +43,8 @@ def main():
     src_fps = cap.get(cv2.CAP_PROP_FPS)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     stride = max(1, round(src_fps / args.fps))
-    first = int(args.start * src_fps)
+    # Align to the stride so every pass samples the same absolute frames.
+    first = -(-int(args.start * src_fps) // stride) * stride
     last = total if args.duration <= 0 else min(total, first + int(args.duration * src_fps))
     cap.set(cv2.CAP_PROP_POS_FRAMES, first)
 
