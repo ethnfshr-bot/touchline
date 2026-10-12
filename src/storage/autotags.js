@@ -9,6 +9,7 @@ import { halfLen } from '../engine/stats.js';
  *     video: { name },                    the analysed video file
  *     sync: { k1, k2?, ht?, ft? },        video seconds: kick-offs, half-time, full-time
  *     events: [{ vt, team, type, x, y, conf? }],
+ *     shape?: { us, them, territory_us_frame?, possession_share_us? }   positional.py summary
  *     generator: { version, ... }         free-form provenance
  *   }
  * Event coordinates use Touchline's frame (0-100, acting team attacking x = 100).
@@ -67,5 +68,30 @@ export function mergeAutoTags(match, auto, mkid) {
     return ev;
   });
   const events = retimeEvents([...kept, ...added], video, halfLen(match));
-  return { ...match, video, events, autoInfo: { ...(auto.generator || {}), importedAt: new Date().toISOString(), count: added.length } };
+  const merged = { ...match, video, events, autoInfo: { ...(auto.generator || {}), importedAt: new Date().toISOString(), count: added.length } };
+  if (auto.shape && typeof auto.shape === 'object') merged.shape = sanitiseShape(auto.shape);
+  return merged;
+}
+
+const SHAPE_KEYS = ['height', 'width', 'depth', 'area', 'line', 'seconds'];
+
+/** Keep only known numeric fields from a positional summary. */
+function sanitiseShape(s) {
+  const block = (b) => {
+    if (!b || typeof b !== 'object') return null;
+    const o = {};
+    for (const k of SHAPE_KEYS) if (isNum(b[k])) o[k] = b[k];
+    return Object.keys(o).length ? o : null;
+  };
+  const side = (x) =>
+    x && typeof x === 'object'
+      ? { overall: block(x.overall), in_possession: block(x.in_possession), out_of_possession: block(x.out_of_possession), coverage: isNum(x.coverage) ? x.coverage : null }
+      : null;
+  const out = { us: side(s.us), them: side(s.them) };
+  const t = s.territory_us_frame;
+  if (t && ['defensive_third', 'middle_third', 'attacking_third'].every((k) => isNum(t[k]))) {
+    out.territory = { defensive: t.defensive_third, middle: t.middle_third, attacking: t.attacking_third };
+  }
+  if (isNum(s.possession_share_us)) out.possession = s.possession_share_us;
+  return out;
 }

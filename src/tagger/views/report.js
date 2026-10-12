@@ -3,7 +3,7 @@ import { posPlayed, score, sortedMatches, teamStats } from '../../engine/stats.j
 import { f2 } from '../../engine/util.js';
 import { cmpRow, heatmap, rateBadge, shotMap, thirdsSVG, xgRace } from '../charts.js';
 import { esc } from '../dom.js';
-import { glossaryPanel } from '../glossary.js';
+import { glossaryPanel, tip } from '../glossary.js';
 import { matchList, roster, store, ui } from '../state.js';
 
 const pct = (a, b) => (b ? Math.round((a / b) * 100) + '%' : '–');
@@ -33,6 +33,38 @@ function focusPanel(m, fx) {
     <div class="grid2" style="margin-top:.6rem"><div><div class="muted small" style="margin-bottom:.3rem">Action heatmap</div><div class="pitchwrap">${heatmap(m, fx.p.id)}</div></div>
     <div><div class="muted small" style="margin-bottom:.3rem">Shots</div><div class="pitchwrap">${shotMap(m, fx.p.id)}</div></div></div>
     <div class="statlist">${stats.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div></div>`;
+}
+
+const SHAPE_ROWS = [
+  ['height', 'Team height', 'm'],
+  ['width', 'Width', 'm'],
+  ['depth', 'Depth', 'm'],
+  ['area', 'Compactness (area)', 'm²'],
+  ['line', 'Defensive line', 'm'],
+];
+
+function shapePanel(m, opp) {
+  const s = m.shape;
+  if (!s || (!s.us && !s.them)) return '';
+  const cell = (side, state, k) => {
+    const b = s[side] && s[side][state];
+    return b && b[k] != null ? Math.round(b[k]) : '–';
+  };
+  const rows = SHAPE_ROWS.map(
+    ([k, label, unit]) => `<tr><td ${tip(k)}>${label} <span class="muted small">${unit}</span></td>
+      <td>${cell('us', 'in_possession', k)}</td><td>${cell('us', 'out_of_possession', k)}</td>
+      <td>${cell('them', 'in_possession', k)}</td><td>${cell('them', 'out_of_possession', k)}</td></tr>`,
+  ).join('');
+  const cov = (side) => (s[side] && s[side].coverage != null ? Math.round(s[side].coverage * 100) + '%' : '–');
+  const terr = s.territory
+    ? `<div class="statlist">${[['Ball in your defensive third', s.territory.defensive], ['Middle third', s.territory.middle], ['Your attacking third', s.territory.attacking]]
+        .map(([k, v]) => `<div><span>${k}</span><b>${Math.round(v * 100)}%</b></div>`)
+        .join('')}${s.possession != null ? `<div><span>Possession (from video)</span><b>${Math.round(s.possession * 100)}%</b></div>` : ''}</div>`
+    : '';
+  return `<div class="panel"><h3>Team shape <span class="badge">auto</span></h3>
+    <div class="tw"><table><thead><tr><th></th><th>Us, with ball</th><th>Us, without</th><th>${opp}, with ball</th><th>${opp}, without</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${terr}
+    <p class="hint">Measured automatically from the video by the Touchline video tool. Coverage: us ${cov('us')}, ${opp} ${cov('them')} of the match had enough players on camera.</p></div>`;
 }
 
 export function vReport() {
@@ -80,7 +112,8 @@ export function vReport() {
       ${cmpRow('Recoveries', A.rec, B.rec)}${cmpRow('Aerials won', A.aer, B.aer)}${cmpRow('Fouls', A.fouls, B.fouls)}
     </div>
   </div>
+  ${shapePanel(m, opp)}
   <div class="panel"><h3>Player ratings</h3>${ps.length ? ratingsTable(m, ps, best) : '<p class="muted">Credit tagged actions to squad players to see ratings.</p>'}</div>
   ${fx ? focusPanel(m, fx) : ''}
-  ${glossaryPanel(['xg', 'race', 'sot', 'big', 'poss', 'tilt', 'ft', 'thirds', 'kp', 'xa', 'rating'])}`;
+  ${glossaryPanel(['xg', 'race', 'sot', 'big', 'poss', 'tilt', 'ft', 'thirds', 'kp', 'xa', 'rating', ...(m.shape ? ['height', 'width', 'depth', 'area', 'line', 'territory', 'coverage'] : [])])}`;
 }

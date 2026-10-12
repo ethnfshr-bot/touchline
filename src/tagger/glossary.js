@@ -20,6 +20,13 @@ export const GLOSSARY = {
   p90: ['Per 90', 'A total divided by minutes played, times 90: what the player would produce over a full match.', 'Fair comparison between starters and substitutes.'],
   form: ['Form (last 5)', 'Average rating over the player\'s last five matches.', 'Spots players coming into or out of form.'],
   onoff: ['On/off splits', "Team xG for and against per 90 minutes while the player was on the pitch, compared with while they weren't.", "Shows a player's effect on the whole team, including work that never appears in individual stats. Needs plenty of matches to be reliable."],
+  height: ['Team height', "How far up the pitch the team's outfield players are on average, measured from their own goal line.", 'A high number means playing further forward. Compare in and out of possession to see how far the team drops back when defending.'],
+  width: ['Width', 'How spread out the outfield players are across the pitch (ignoring the most extreme player on each side).', 'Wide in possession stretches the opposition; narrow out of possession protects the middle.'],
+  depth: ['Depth', 'Distance from the deepest to the most advanced outfield players (ignoring the extremes).', "Large depth out of possession means gaps between the lines for the opposition to play through."],
+  area: ['Compactness (area)', 'The area of pitch the outfield players cover, in square metres. Smaller means more compact.', 'Compact teams are harder to play through. Watch whether it grows late in matches as players tire.'],
+  line: ['Defensive line', 'How far the deepest outfield player is from their own goal line.', 'A high line squeezes the pitch but leaves space behind; a deep line invites pressure.'],
+  territory: ['Territory', 'Share of the time the ball was in each third, from your point of view.', 'Shows where the match was played, measured from the video rather than from memory.'],
+  coverage: ['Coverage', "Share of the match where enough of a team's players were on camera to measure its shape.", 'A follow-cam shows only part of the pitch. Low coverage means the shape numbers are based on less of the match; panorama footage gives the most complete picture.'],
   formation: ['By formation', 'Results and xG per match for each formation you set.', 'Tests whether a system actually works for your team, rather than relying on gut feeling.'],
 };
 

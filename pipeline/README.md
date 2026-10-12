@@ -6,7 +6,7 @@ Tags a match automatically from the video: kick-off, half-time, second-half kick
 
 1. Drag a match video (MP4) onto **`Analyse match.bat`**.
 2. Type your team's shirt colour and the opposition's (e.g. `navy`, `red`, `white`).
-3. Leave it running. It takes roughly as long as the video on a computer with an NVIDIA graphics card. If it stops, run it again; finished steps are skipped.
+3. Leave it running, ideally overnight: for now it takes about 2–3 times as long as the video on a computer with an NVIDIA graphics card (speeding this up is on the roadmap). If it stops, run it again; finished steps are skipped.
 4. When it says **Done**, open the match in Touchline, load the same video on the Tag screen, press **Add automatic tags** and choose the `.touchline-auto.json` file it made next to the video.
 
 Automatic tags show an **auto** badge in the event log. Check them against the video; you can delete or add tags as normal. Re-adding automatic tags replaces the old automatic ones and keeps everything you tagged by hand.

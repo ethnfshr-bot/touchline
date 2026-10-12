@@ -71,9 +71,11 @@ def main():
     run("phases", str(work), "--us", us, "--them", them, "--pitch", str(work / "pitch.npz"), "--balls", str(work / "balls.npz"))
     ph = json.loads((work / "phases.json").read_text())
     kicks = [str(ph[k]) for k in ("k1", "k2") if ph.get(k) is not None]
-    print("[6/6] Detecting shots...", flush=True)
+    print("[6/6] Detecting shots and measuring team shape...", flush=True)
     if kicks:
-        run("shots", str(work), "--pitch", str(work / "pitch.npz"), "--balls", str(work / "balls.npz"), "--us", us, "--them", them, "--kickoffs", *kicks)
+        common = ["--pitch", str(work / "pitch.npz"), "--balls", str(work / "balls.npz"), "--us", us, "--them", them, "--kickoffs", *kicks]
+        run("shots", str(work), *common)
+        run("positional", str(work), *common)
     dest = video.with_name(video.stem + ".touchline-auto.json")
     run("export", str(work), "--video", video.name, "--out", str(dest))
     print(f"\nDone. In Touchline, open the match, load this video, then press 'Add automatic tags' and choose:\n  {dest}")

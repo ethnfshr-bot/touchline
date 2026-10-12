@@ -20,7 +20,7 @@ from . import __version__
 GOAL_LOOKBACK_S = 90
 
 
-def build(phases: dict, shots: list, video_name: str) -> dict:
+def build(phases: dict, shots: list, video_name: str, shape: dict | None = None) -> dict:
     events = [
         {"vt": s["vt"], "team": s["team"], "type": "shot", "x": s["x"], "y": s["y"], "conf": 0.5}
         for s in shots
@@ -34,7 +34,7 @@ def build(phases: dict, shots: list, video_name: str) -> dict:
         else:
             unplaced.append(g)
     sync = {k: round(float(phases[k]), 2) for k in ("k1", "k2", "ht", "ft") if phases.get(k) is not None}
-    return {
+    out = {
         "app": "touchline-auto",
         "schema": 1,
         "video": {"name": video_name},
@@ -42,6 +42,9 @@ def build(phases: dict, shots: list, video_name: str) -> dict:
         "events": sorted(events, key=lambda e: e["vt"]),
         "generator": {"tool": "touchline-pipeline", "version": __version__, "unplaced_goals": unplaced},
     }
+    if shape:
+        out["shape"] = shape
+    return out
 
 
 def main():
@@ -53,7 +56,8 @@ def main():
     d = Path(args.out_dir)
     phases = json.loads((d / "phases.json").read_text())
     shots = json.loads((d / "shots_v2.json").read_text())["shots"] if (d / "shots_v2.json").exists() else []
-    auto = build(phases, shots, Path(args.video).name)
+    shape = json.loads((d / "positional.json").read_text())["summary"] if (d / "positional.json").exists() else None
+    auto = build(phases, shots, Path(args.video).name, shape)
     dest = Path(args.out) if args.out else d / "touchline-auto.json"
     dest.write_text(json.dumps(auto, indent=1))
     print(f"{dest}: {len(auto['events'])} events, sync {auto['sync']}")

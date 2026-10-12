@@ -55,6 +55,22 @@ describe('mergeAutoTags', () => {
     expect(m.events.filter((e) => e.auto)).toHaveLength(2);
   });
 
+  it('keeps only known numeric fields from a team shape summary', () => {
+    const a = auto();
+    a.shape = {
+      us: { overall: { height: 38.2, width: 41, evil: '<script>' }, in_possession: { height: 44 }, out_of_possession: null, coverage: 0.62 },
+      them: 'nonsense',
+      territory_us_frame: { defensive_third: 0.3, middle_third: 0.45, attacking_third: 0.25, seconds: 3000 },
+      possession_share_us: 0.48,
+    };
+    const m = mergeAutoTags(makeMatch({ events: [] }), a, mkid);
+    expect(m.shape.us.overall).toEqual({ height: 38.2, width: 41 });
+    expect(m.shape.us.coverage).toBe(0.62);
+    expect(m.shape.them).toBeNull();
+    expect(m.shape.territory).toEqual({ defensive: 0.3, middle: 0.45, attacking: 0.25 });
+    expect(m.shape.possession).toBe(0.48);
+  });
+
   it("keeps the user's own kick-off marks", () => {
     const start = makeMatch({ events: [], video: { source: 'file', name: 'match.mp4', k1: 150 } });
     const m = mergeAutoTags(start, auto(), mkid);

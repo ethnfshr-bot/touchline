@@ -18,7 +18,7 @@ echo.
 set /p US="Your team's shirt colour (e.g. navy, red, white): "
 set /p THEM="Opposition shirt colour: "
 echo.
-echo This takes a while (roughly as long as the video). You can leave it running.
+echo This takes a while (for now, 2-3 times as long as the video). You can leave it running overnight.
 echo.
 ".venv\Scripts\python.exe" -m touchline_cv.analyse "%~1" --us "%US%" --them "%THEM%"
 echo.
