@@ -51,8 +51,10 @@ Measured against hand-tagged matches in `groundtruth/`. Targets:
 
 | Event | Target | Current |
 |---|---|---|
-| Kick-off | within 5 s | 2:24.98 vs 2:25 on the one match tested |
-| Goals | ≥ 95% found, near-zero false goals | not yet measured |
+| Kick-off | within 5 s | 2:25 vs 2:25 (Leeming v La Fammia, full match) |
+| Second-half kick-off | within 5 s | 58:56, checked by eye on frames |
+| Half-time / full-time | within a minute | 47:46 and 105:17: plausible (45 min + stoppage), not yet checked against a referee's watch |
+| Goals | ≥ 95% found, near-zero false goals | not yet measured (final score needed). Goals are only counted after a 30-second pause before the restart; 5 uncertain restarts were listed as "possible goals" for checking |
 | Shots | ≥ 80% found, ≤ 20% false | not yet measured with the current version |
 
 ### Pitch calibration on follow-cam video: not solved yet
