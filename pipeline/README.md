@@ -64,7 +64,13 @@ Shot locations (for xG) and team shape need every frame mapped onto the pitch. O
 - Carrying a calibration to other frames through the camera motion drifts: about 3 m after a few seconds, 20 m+ after a minute.
 - Veo's panorama view can't be downloaded, so follow-cam is the footage everyone has.
 
-Next steps: solve the camera's rotation and zoom for the whole match jointly (bundle adjustment of a rotating camera), fit one pitch calibration from all reliable markings, and fine-tune the pitch model on Veo frames. `touchline_cv.shots`, `.positional`, `.fuse` and `.checkcarry` remain for this work.
+Progress since (`rig.py`, `rigfit.py`):
+
+- **The camera model is confirmed.** Solving every keyframe's rotation and zoom jointly (bundle adjustment of a rotating camera, from SIFT matches between neighbouring keyframes) fits the matches to **2 pixels**. Veo's follow-cam really is a camera turning and zooming from a fixed point. Long-range "loop closure" matches need filtering first: unfiltered, false matches wrecked the solve.
+- **One calibration for the whole match** maps camera directions to the pitch. Near-box and centre-circle/halfway markings each point the same way to within about 2°, and their averages fit one calibration to 0.8–2.3 m. Far-box markings scatter by ~45°: the pitch model mixes up the two penalty boxes.
+- **Current accuracy:** fitted on one part of a 5-minute window and tested on the rest, 46% of stable markings land within 2° (≈3 m on the pitch). The remaining error is mostly the detector placing points loosely along lines, not camera drift.
+
+Next: (1) project every marking into every frame from the match-wide calibration to make consistent training labels automatically, (2) fine-tune the pitch model on Veo frames with them, (3) repeat, aiming for ~1 m; then switch shots and team shape on. `touchline_cv.shots`, `.positional`, `.fuse` and `.checkcarry` remain for this work.
 
 Other known limits: shot outcome (saved / off target / blocked) isn't detected, so automatic shots will use an outcome-unknown "Shot" type; which player shot isn't identified; goals found from restarts have no pitch position, so they count for the score but not for xG.
 
