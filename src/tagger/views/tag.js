@@ -39,6 +39,16 @@ function videoPicker(m) {
     </div>${last}`;
 }
 
+/** Restarts the video tool thought might follow goals but wasn't sure about. */
+function possibleGoals(m) {
+  const list = (m.autoInfo && Array.isArray(m.autoInfo.possible_goals) ? m.autoInfo.possible_goals : []).filter((p) => typeof p.vt === 'number');
+  if (!list.length) return '';
+  const links = list
+    .map((p) => (videoActive() ? `<button class="linkish" data-a="seek" data-n="${p.vt}">${fmt(p.vt)}</button>` : fmt(p.vt)))
+    .join(', ');
+  return `<p class="hint">The video tool found restarts that might follow goals but wasn't sure (video time): ${links}. ${videoActive() ? 'Click one to check it, and tag the goal if there was one.' : 'Load the video to check them.'}</p>`;
+}
+
 function clockPanel(m) {
   if (!videoActive()) {
     return `<div class="clock" style="margin-top:.7rem">
@@ -137,7 +147,7 @@ export function vTag() {
     <div class="vidrow">
       <label class="btn">Add automatic tags<input type="file" id="autofile" accept="application/json,.json" hidden></label>
       <span class="hint" style="margin:0">${m.autoInfo ? `${m.autoInfo.count} automatic tags added. ` : ''}From the Touchline video tool. Replaces earlier automatic tags; your own tags are kept.</span>
-    </div></div>
+    </div>${possibleGoals(m)}</div>
   ${lineupPanel(m)}
   <div class="grid2">
   <div>

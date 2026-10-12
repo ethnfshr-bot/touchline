@@ -65,6 +65,33 @@ def test_longest_gap_finds_half_time():
     assert longest_gap(t, on, 0, 6000) == (2800.0, 3400.0)
 
 
+def _sec(act):
+    """Per-second rows [t, sep, n_us, n_them, activity, frame] with given activity."""
+    t = np.arange(len(act), dtype=float)
+    return np.c_[t, np.full(len(t), 0.8), np.full(len(t), 10), np.full(len(t), 10), act, t * 30]
+
+
+def test_breaks_find_half_time_but_not_short_stoppages():
+    from touchline_cv.phases import breaks, calm_mask
+
+    act = np.full(6000, 0.5)
+    act[2800:3400] = 0.25  # 10-minute half-time
+    act[1000:1060] = 0.2  # 1-minute stoppage
+    sec = _sec(act)
+    b = breaks(sec[:, 0], calm_mask(sec))
+    assert len(b) == 1
+    assert abs(b[0][0] - 2800) < 70 and abs(b[0][1] - 3400) < 70
+
+
+def test_pre_kickoff_pause_measures_the_quiet_spell():
+    from touchline_cv.phases import pre_kickoff_pause
+
+    act = np.full(400, 0.6)
+    act[200:260] = 0.2  # a minute of walking back, then kick-off at 260
+    assert 45 <= pre_kickoff_pause(_sec(act), 260.0) <= 61
+    assert pre_kickoff_pause(_sec(np.full(400, 0.6)), 260.0) < 5
+
+
 def test_hex_to_lab_orders_lightness():
     assert hex_to_lab("#ffffff")[0] > hex_to_lab("#1b2a4a")[0] > hex_to_lab("#000000")[0]
 

@@ -44,7 +44,11 @@ def build(phases: dict, shots: list, video_name: str, shape: dict | None = None)
         "video": {"name": video_name},
         "sync": sync,
         "events": sorted(events, key=lambda e: e["vt"]),
-        "generator": {"tool": "touchline-pipeline", "version": __version__, "unplaced_goals": unplaced},
+        "generator": {
+            "tool": "touchline-pipeline", "version": __version__, "unplaced_goals": unplaced,
+            # Restarts that might follow goals but didn't clear the bar: for a person to check.
+            "possible_goals": [{"vt": round(float(p["t"]), 1), "scored_by": p.get("scored_by")} for p in phases.get("possible_goals", [])],
+        },
     }
     if shape:
         out["shape"] = shape

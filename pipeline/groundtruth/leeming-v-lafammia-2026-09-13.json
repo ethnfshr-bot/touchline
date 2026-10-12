@@ -4,6 +4,13 @@
   "us": "Leeming SC (navy)",
   "them": "La Fammia SC (red and white stripes)",
   "kickoff_video_seconds": 145,
+  "second_half_kickoff_video_seconds": 3536,
+  "notes": [
+    "Kick-off 2:25 from the user.",
+    "Second-half kick-off 58:56 checked by eye on frames (two players on the centre spot after the half-time break).",
+    "Set pieces at 36:17 and 81:09 and the post-match handshake line at 106:31 are NOT kick-offs (checked by eye).",
+    "Final score and goal times not yet known: needed to measure goal detection."
+  ],
   "windows": [
     {
       "match_minutes": [0, 11],
