@@ -3,3 +3,6 @@
 # then:
 ultralytics>=8.3
 scikit-learn>=1.5
+gdown>=5.0
+# development
+pytest>=8.0
