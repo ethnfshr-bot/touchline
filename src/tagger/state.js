@@ -14,9 +14,18 @@ export const ui = {
   sp: null, // player selected in the season view
   per90: false,
   armed: null, // key of a delete button awaiting its second tap
-  lastId: null,
+  undo: [], // ids of events tagged this session, most recent last: { matchId, id }
   lineOpen: false,
 };
+
+/** Most recent event tagged this session in match m that still exists, or null. */
+export function undoTarget(m) {
+  for (let i = ui.undo.length - 1; i >= 0; i--) {
+    const u = ui.undo[i];
+    if (u.matchId === m.id && m.events.some((e) => e.id === u.id)) return u.id;
+  }
+  return null;
+}
 
 export const roster = () => store.data.roster;
 export const matchList = () => Object.values(store.data.matches);

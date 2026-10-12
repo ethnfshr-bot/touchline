@@ -5,7 +5,7 @@ import { xgOf } from '../../engine/xg.js';
 import { clock, fmt, nowSec } from '../clock.js';
 import { esc } from '../dom.js';
 import { pitchSVG, toScreen } from '../pitch.js';
-import { pName, roster, store, ui } from '../state.js';
+import { pName, roster, store, ui, undoTarget } from '../state.js';
 import { isPaused, videoActive } from '../video.js';
 
 function lineupPanel(m) {
@@ -139,7 +139,7 @@ export function vTag() {
     <div class="panel">
       <div class="row" style="justify-content:space-between;margin-bottom:.6rem">
         <div class="seg"><button class="us" data-a="team" data-v="us" aria-pressed="${ui.team === 'us'}">Us</button><button class="them" data-a="team" data-v="them" aria-pressed="${ui.team === 'them'}">Them</button></div>
-        <button class="btn" data-a="undo" ${m.events.length ? '' : 'disabled'}>Undo last</button>
+        <button class="btn" data-a="undo" ${undoTarget(m) ? '' : 'disabled'}>Undo last</button>
       </div>
       ${playerPicker}
       <div class="pitchwrap">${pitchSVG(markers + arrow + mk, 'tagpitch')}</div>

@@ -11,7 +11,7 @@ import { $, downloadFile, mkid, toast } from './dom.js';
 import { saveAll, saveMatch, saveRoster } from './persist.js';
 import { svgPoint, toFrame } from './pitch.js';
 import { render } from './render.js';
-import { matchList, roster, store, ui } from './state.js';
+import { matchList, roster, store, ui, undoTarget } from './state.js';
 import { isPaused, loadFile, loadYouTube, seekMatch, seekVideo, setPlayerHooks, togglePlay, unloadVideo, videoActive, videoTime } from './video.js';
 
 const REPLAY_LEAD_IN = 3; // seconds of build-up shown when replaying an event
@@ -51,7 +51,7 @@ function logEvent(type) {
     if (ui.team === 'us' && ui.mods.ast && ui.mods.ast !== ui.pid) e.ast = ui.mods.ast;
     ui.mods = { header: false, big: false, pen: false, ast: '' };
   }
-  ui.lastId = e.id;
+  ui.undo.push({ matchId: m.id, id: e.id });
   m.events.push(e);
   m.events.sort((a, b) => a.t - b.t);
   ui.mark = null;
@@ -238,10 +238,14 @@ function onClick(evt) {
       logEvent(b.dataset.t);
       break;
     case 'undo': {
-      if (!m || !m.events.length) return;
-      const i = m.events.findIndex((e) => e.id === ui.lastId);
-      m.events.splice(i >= 0 ? i : m.events.length - 1, 1);
-      ui.lastId = null;
+      if (!m) return;
+      const target = undoTarget(m);
+      if (!target) {
+        toast('Nothing to undo. Use × in the event log to delete an older event.', 3000);
+        return;
+      }
+      m.events = m.events.filter((e) => e.id !== target);
+      ui.undo = ui.undo.filter((u) => u.id !== target);
       saveMatch(m.id);
       render();
       toast('Removed last event');
