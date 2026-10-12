@@ -126,6 +126,34 @@ def solve(n, pairs, R0, f0, cx, cy, max_nfev=60):
     return sol.x, float(np.median(r0)), float(np.median(r1))
 
 
+def forward_vectors(params, n):
+    rv = params[: 3 * n].reshape(n, 3)
+    return np.array([Rotation.from_rotvec(r).as_matrix().T @ [0, 0, 1.0] for r in rv])
+
+
+def loop_candidates(params, n, max_angle_deg=25.0, min_gap=8, per_frame=4, rng=None):
+    """Pairs of keyframes far apart in time but facing the same way (per the current solution)."""
+    fwd = forward_vectors(params, n)
+    cosmax = np.cos(np.radians(max_angle_deg))
+    out = []
+    for i in range(n):
+        d = fwd @ fwd[i]
+        cand = [j for j in np.where(d >= cosmax)[0] if j < i - min_gap]
+        if not cand:
+            continue
+        if len(cand) > per_frame:
+            # Spread choices across time so loops tie distant parts of the match together.
+            cand = [cand[k] for k in np.linspace(0, len(cand) - 1, per_frame).astype(int)]
+        out.extend((int(j), i) for j in cand)
+    return out
+
+
+def predicted_error(params, n, cx, cy, i, j, pa, pb):
+    """Median pixel error of matched points under the current solution."""
+    p = project(params, n, cx, cy, np.full(len(pa), i), np.full(len(pa), j), pa)
+    return float(np.median(np.hypot(*(p - pb).T)))
+
+
 def rays(params, n, cx, cy, idx, u):
     rv = params[: 3 * n].reshape(n, 3)
     f = np.exp(params[3 * n :])
@@ -143,7 +171,8 @@ def main():
     ap.add_argument("--from", dest="t0", type=float, default=0.0)
     ap.add_argument("--to", dest="t1", type=float, default=1e9)
     ap.add_argument("--loop-every", type=int, default=30, help="keyframes between loop-closure landmarks (0 = none)")
-    ap.add_argument("--max-nfev", type=int, default=60)
+    ap.add_argument("--max-nfev", type=int, default=200)
+    ap.add_argument("--loop-tolerance", type=float, default=60.0, help="max median px error for a loop closure to be trusted")
     args = ap.parse_args()
     out = Path(args.out)
     t_start = time.time()
@@ -185,18 +214,36 @@ def main():
             if i - d >= 0:
                 add(i - d, i)
     seq = len(pairs)
-    landmarks = list(range(0, n, args.loop_every)) if args.loop_every > 0 else []
-    loops = 0
-    for i in range(n):
-        for L in landmarks:
-            if abs(L - i) > 3 and add(L, i):
-                loops += 1
-    print(f"pairs: {seq} sequential, {loops} loop closures, {time.time() - t_start:.0f}s", flush=True)
+    print(f"pairs: {seq} sequential, {time.time() - t_start:.0f}s", flush=True)
 
     f0 = width / (2 * np.tan(np.radians(60) / 2))  # ~60 degree horizontal field of view to start
     R0 = init_from_chain(n, pair_H, cx, cy, f0)
     params, before, after = solve(n, pairs, R0, f0, cx, cy, args.max_nfev)
-    print(f"bundle adjustment: median residual {before:.1f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
+    print(f"sequential solve: median residual {before:.1f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
+
+    # Loop closures: only between keyframes facing the same way, and only if the
+    # matches agree with the sequential solution (false matches are far off).
+    loops = rejected = 0
+    if args.loop_every > 0:
+        for j, i in loop_candidates(params, n, per_frame=max(1, 60 // args.loop_every), rng=rng):
+            r = match(feats[j], feats[i], flann)
+            if r is None:
+                continue
+            _, pa, pb = r
+            if predicted_error(params, n, cx, cy, j, i, pa, pb) > args.loop_tolerance:
+                rejected += 1
+                continue
+            if len(pa) > PTS_PER_PAIR:
+                sel = rng.choice(len(pa), PTS_PER_PAIR, replace=False)
+                pa, pb = pa[sel], pb[sel]
+            pairs.append((j, i, pa, pb))
+            loops += 1
+        print(f"loop closures: {loops} accepted, {rejected} rejected, {time.time() - t_start:.0f}s", flush=True)
+        if loops:
+            R1 = [Rotation.from_rotvec(r).as_matrix() for r in params[: 3 * n].reshape(n, 3)]
+            f1 = float(np.exp(np.median(params[3 * n :])))
+            params, b2, after = solve(n, pairs, R1, f1, cx, cy, args.max_nfev)
+            print(f"solve with loops: {b2:.2f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
 
     rv = params[: 3 * n].reshape(n, 3)
     f = np.exp(params[3 * n :])

@@ -27,7 +27,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .pitch import LENGTH, VERTICES
+from .pitch import VERTICES, vertices
 from .rig import rays
 
 THRESH = 0.035  # ~2 degrees in the ray plane: about the spread of a stable keypoint
@@ -39,8 +39,9 @@ RIGHT = list(range(17, 30))
 def mirror_index():
     """Keypoint index -> index of the same marking at the other end."""
     m = {}
+    length = VERTICES[24, 0]  # far corner (length, 0): follows a fitted pitch size
     for i, (x, y) in enumerate(VERTICES):
-        d = np.hypot(VERTICES[:, 0] - (LENGTH - x), VERTICES[:, 1] - y)
+        d = np.hypot(VERTICES[:, 0] - (length - x), VERTICES[:, 1] - y)
         j = int(np.argmin(d))
         if d[j] < 1e-6:
             m[i] = j
@@ -54,10 +55,36 @@ def ang_err(Hpr, k, r):
     return np.hypot(*(p - r).T)
 
 
+def size_search(ks, r, stable_box):
+    """Estimate pitch length and width: the size whose markings the rays agree with best.
+
+    Penalty boxes, the centre circle and the spot are regulation size everywhere;
+    only corner and halfway-line positions depend on the pitch's length and width.
+    Returns (length, width, inliers, median_err).
+    """
+    box = LEFT if stable_box == "left" else RIGHT
+    sel = np.isin(ks, CENTRE + box)
+    best = None
+    for L in np.arange(90.0, 111.0, 1.0):
+        for W in np.arange(55.0, 76.0, 1.0):
+            V = vertices(L, W)
+            H, mask = cv2.findHomography(V[ks[sel]], r[sel], cv2.RANSAC, THRESH)
+            if H is None:
+                continue
+            v = np.c_[V[ks[sel]], np.ones(sel.sum())] @ H.T
+            e = np.hypot(*(v[:, :2] / v[:, 2:] - r[sel]).T)
+            n_in, med = int((e < THRESH).sum()), float(np.median(e[e < THRESH])) if (e < THRESH).any() else 1.0
+            if best is None or (n_in, -med) > (best[2], -best[3]):
+                best = (float(L), float(W), n_in, med)
+    return best
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
+    ap.add_argument("--fit-size", action="store_true", help="estimate the pitch's length and width instead of assuming 105 x 68")
     args = ap.parse_args()
+    global VERTICES
     out = Path(args.out)
     kf = np.load(out / "rig.npz")["keyframes"]
     n = len(kf)
@@ -86,6 +113,13 @@ def main():
     if best is None:
         raise SystemExit("Not enough pitch keypoints to calibrate.")
     seed_box, Hpr, seed_share = best
+    size = None
+    if args.fit_size:
+        size = size_search(ks, r, seed_box)
+        VERTICES = vertices(size[0], size[1])
+        sel = np.isin(ks, CENTRE + (LEFT if seed_box == "left" else RIGHT))
+        Hpr, _ = cv2.findHomography(VERTICES[ks[sel]], r[sel], cv2.RANSAC, THRESH)
+        mir = mirror_index()
 
     # Relabel: each keypoint takes its own or its mirrored label, whichever fits.
     k_fixed = ks.copy()
@@ -123,6 +157,9 @@ def main():
         "left box": grp(np.isin(k_fixed, LEFT)), "centre": grp(np.isin(k_fixed, CENTRE)), "right box": grp(np.isin(k_fixed, RIGHT)),
         "time_split_test": {"median_deg": round(float(np.degrees(np.median(et))), 2), "share_within_threshold": round(float(np.mean(et < THRESH)), 3)},
     }
+    if size:
+        report["pitch_size_m"] = {"length": size[0], "width": size[1]}
+        np.save(out / "rig_size.npy", np.array(size[:2]))
     np.save(out / "rig_G.npy", G)
     (out / "rigfit.json").write_text(json.dumps(report, indent=1))
     print(json.dumps(report, indent=1))
