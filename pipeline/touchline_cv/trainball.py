@@ -6,6 +6,13 @@ pipeline/models/touchline-ball.pt; compare it with the current ball model on
 hand-checked frames (bench.py) before switching to it.
 
     python -m touchline_cv.trainball pipeline/out/balldata [--epochs 60 --imgsz 1280 --batch 8]
+
+First result (2026-10-13, one match, 924 training frames, 60 epochs, ~1.4 min
+each on an RTX 3060): ball precision 0.70 / recall 0.66 against the pseudo-labels,
+persons 0.93 / 0.95. On the 24 hand-checked frames it roughly ties the Roboflow
+ball model (~16 right, 2-3 wrong each) despite being trained on that match, so
+the pipeline keeps the Roboflow model until training on more matches beats it
+on a match it hasn't seen.
 """
 
 from __future__ import annotations
