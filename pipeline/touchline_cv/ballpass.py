@@ -56,7 +56,7 @@ def main():
             ok, frame = cap.retrieve()
             if not ok:
                 break
-            r = model.predict(frame, imgsz=args.imgsz, conf=0.05, verbose=False)[0]
+            r = model.predict(frame, imgsz=args.imgsz, conf=0.05, quantize=16, verbose=False)[0]
             for b, c in zip(r.boxes.xyxy.cpu().numpy(), r.boxes.conf.cpu().numpy()):
                 balls.append([f, f / src_fps, *b, c])
             if ((f - first) // stride) % 1800 == 0:

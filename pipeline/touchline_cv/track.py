@@ -132,7 +132,7 @@ def main():
             t = fidx / src_fps
             r = model.track(
                 frame, imgsz=args.imgsz, conf=0.1, classes=[PERSON, BALL],
-                persist=True, tracker="bytetrack.yaml", verbose=False,
+                persist=True, tracker="bytetrack.yaml", quantize=16, verbose=False,
             )[0]
             b = r.boxes
             xyxy = b.xyxy.cpu().numpy()
