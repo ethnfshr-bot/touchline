@@ -97,36 +97,68 @@ def init_from_chain(n, pair_H, cx, cy, f0):
     return R
 
 
-def project(params, n, cx, cy, ia, ib, ua):
+DIST_SCALE = 1000.0  # pixels: distortion is k1 * (radius / DIST_SCALE)^2
+
+
+def undistort(u, cx, cy, k1):
+    """Observed pixels -> ideal pinhole pixels (first-order radial model, screen space)."""
+    if not k1:
+        return u
+    d = u - [cx, cy]
+    rho2 = np.sum((d / DIST_SCALE) ** 2, axis=1, keepdims=True)
+    return [cx, cy] + d * (1 - k1 * rho2)
+
+
+def distort(p, cx, cy, k1):
+    """Ideal pinhole pixels -> observed pixels (inverse of undistort to first order)."""
+    if not k1:
+        return p
+    d = p - [cx, cy]
+    rho2 = np.sum((d / DIST_SCALE) ** 2, axis=1, keepdims=True)
+    return [cx, cy] + d * (1 + k1 * rho2)
+
+
+def project(params, n, cx, cy, ia, ib, ua, k1=0.0):
     rv = params[: 3 * n].reshape(n, 3)
-    f = np.exp(params[3 * n :])
+    f = np.exp(params[3 * n : 4 * n])
     Ra = Rotation.from_rotvec(rv[ia]).as_matrix()
     Rb = Rotation.from_rotvec(rv[ib]).as_matrix()
+    ua = undistort(ua, cx, cy, k1)
     x = np.c_[(ua[:, 0] - cx) / f[ia], (ua[:, 1] - cy) / f[ia], np.ones(len(ua))]
     ray = np.einsum("nji,nj->ni", Ra, x)  # R_a^T x
     cam = np.einsum("nij,nj->ni", Rb, ray)  # R_b ray
-    return np.c_[f[ib] * cam[:, 0] / cam[:, 2] + cx, f[ib] * cam[:, 1] / cam[:, 2] + cy]
+    p = np.c_[f[ib] * cam[:, 0] / cam[:, 2] + cx, f[ib] * cam[:, 1] / cam[:, 2] + cy]
+    return distort(p, cx, cy, k1)
 
 
-def solve(n, pairs, R0, f0, cx, cy, max_nfev=60, shared_focal=False):
+def solve(n, pairs, R0, f0, cx, cy, max_nfev=60, shared_focal=False, distortion=False, k1_0=0.0):
     """Bundle adjustment. With shared_focal, one focal length for all keyframes
-    (removes the zoom/rotation trade-off at the cost of ignoring real zoom)."""
+    (removes the zoom/rotation trade-off at the cost of ignoring real zoom).
+    With distortion, also estimates one global radial distortion term k1.
+    Returns (params [rotvecs, log f], k1, median residual before, after)."""
     ia = np.concatenate([np.full(len(p[2]), p[0]) for p in pairs])
     ib = np.concatenate([np.full(len(p[2]), p[1]) for p in pairs])
     ua = np.vstack([p[2] for p in pairs])
     ub = np.vstack([p[3] for p in pairs])
     rot0 = np.vstack([Rotation.from_matrix(r).as_rotvec() for r in R0]).ravel()
     nf = 1 if shared_focal else n
-    x0 = np.r_[rot0, np.full(nf, np.log(f0))]
+    nd = 1 if distortion else 0
+    x0 = np.r_[rot0, np.full(nf, np.log(f0)), np.full(nd, k1_0)]
 
     def full(p):
-        return p if not shared_focal else np.r_[p[: 3 * n], np.full(n, p[3 * n])]
+        cams = p[: 3 * n + nf]
+        return cams if not shared_focal else np.r_[cams[: 3 * n], np.full(n, cams[3 * n])]
+
+    def k1_of(p):
+        return p[-1] if distortion else k1_0
 
     def resid(p):
-        return (project(full(p), n, cx, cy, ia, ib, ua) - ub).ravel()
+        return (project(full(p), n, cx, cy, ia, ib, ua, k1_of(p)) - ub).ravel()
 
     m = len(ua)
-    S = lil_matrix((2 * m, 3 * n + nf), dtype=np.int8)
+    S = lil_matrix((2 * m, 3 * n + nf + nd), dtype=np.int8)
+    if distortion:
+        S[:, -1] = 1
     rows = np.arange(m)
     for cam_idx in (ia, ib):
         for k in range(3):
@@ -140,7 +172,7 @@ def solve(n, pairs, R0, f0, cx, cy, max_nfev=60, shared_focal=False):
     # Jacobian columns and the solver stalled at its starting point.
     sol = least_squares(resid, x0, jac_sparsity=S, loss="huber", f_scale=3.0, x_scale=1.0, max_nfev=max_nfev, verbose=0)
     r1 = np.abs(sol.fun)
-    return full(sol.x), float(np.median(r0)), float(np.median(r1))
+    return full(sol.x), float(k1_of(sol.x)), float(np.median(r0)), float(np.median(r1))
 
 
 def forward_vectors(params, n):
@@ -165,13 +197,14 @@ def loop_candidates(params, n, max_angle_deg=25.0, min_gap=8, per_frame=4, rng=N
     return out
 
 
-def predicted_error(params, n, cx, cy, i, j, pa, pb):
+def predicted_error(params, n, cx, cy, i, j, pa, pb, k1=0.0):
     """Median pixel error of matched points under the current solution."""
-    p = project(params, n, cx, cy, np.full(len(pa), i), np.full(len(pa), j), pa)
+    p = project(params, n, cx, cy, np.full(len(pa), i), np.full(len(pa), j), pa, k1)
     return float(np.median(np.hypot(*(p - pb).T)))
 
 
-def rays(params, n, cx, cy, idx, u):
+def rays(params, n, cx, cy, idx, u, k1=0.0):
+    u = undistort(u, cx, cy, k1)
     rv = params[: 3 * n].reshape(n, 3)
     f = np.exp(params[3 * n :])
     R = Rotation.from_rotvec(rv[idx]).as_matrix()
@@ -189,7 +222,9 @@ def main():
     ap.add_argument("--to", dest="t1", type=float, default=1e9)
     ap.add_argument("--loop-every", type=int, default=30, help="keyframes between loop-closure landmarks (0 = none)")
     ap.add_argument("--max-nfev", type=int, default=200)
+    ap.add_argument("--tag", default="", help="suffix for output files (rig_<tag>.npz), for windowed runs")
     ap.add_argument("--shared-focal", action="store_true", help="one focal length for all keyframes")
+    ap.add_argument("--distortion", action="store_true", help="also estimate one global radial distortion term")
     ap.add_argument("--loop-tolerance", type=float, default=60.0, help="max median px error for a loop closure to be trusted")
     args = ap.parse_args()
     out = Path(args.out)
@@ -236,7 +271,7 @@ def main():
 
     f0 = width / (2 * np.tan(np.radians(60) / 2))  # ~60 degree horizontal field of view to start
     R0 = init_from_chain(n, pair_H, cx, cy, f0)
-    params, before, after = solve(n, pairs, R0, f0, cx, cy, args.max_nfev, args.shared_focal)
+    params, k1, before, after = solve(n, pairs, R0, f0, cx, cy, args.max_nfev, args.shared_focal, args.distortion)
     print(f"sequential solve: median residual {before:.1f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
 
     # Loop closures: only between keyframes facing the same way, and only if the
@@ -248,7 +283,7 @@ def main():
             if r is None:
                 continue
             _, pa, pb = r
-            if predicted_error(params, n, cx, cy, j, i, pa, pb) > args.loop_tolerance:
+            if predicted_error(params, n, cx, cy, j, i, pa, pb, k1) > args.loop_tolerance:
                 rejected += 1
                 continue
             if len(pa) > PTS_PER_PAIR:
@@ -260,16 +295,17 @@ def main():
         if loops:
             R1 = [Rotation.from_rotvec(r).as_matrix() for r in params[: 3 * n].reshape(n, 3)]
             f1 = float(np.exp(np.median(params[3 * n :])))
-            params, b2, after = solve(n, pairs, R1, f1, cx, cy, args.max_nfev, args.shared_focal)
+            params, k1, b2, after = solve(n, pairs, R1, f1, cx, cy, args.max_nfev, args.shared_focal, args.distortion, k1)
             print(f"solve with loops: {b2:.2f}px -> {after:.2f}px, {time.time() - t_start:.0f}s", flush=True)
 
     rv = params[: 3 * n].reshape(n, 3)
     f = np.exp(params[3 * n :])
     kf = np.c_[[x[0] for x in feats], [x[1] for x in feats], rv, f]
-    np.savez_compressed(out / "rig.npz", keyframes=kf)
+    sfx = f"_{args.tag}" if args.tag else ""
+    np.savez_compressed(out / f"rig{sfx}.npz", keyframes=kf, k1=np.array(k1))
     info = {"keyframes": n, "pairs_sequential": seq, "loop_closures": loops, "residual_px_before": round(before, 2),
             "residual_px_after": round(after, 2), "focal_px_median": round(float(np.median(f)), 1), "seconds": round(time.time() - t_start)}
-    (out / "rig.json").write_text(json.dumps(info, indent=1))
+    (out / f"rig{sfx}.json").write_text(json.dumps(info, indent=1))
     print(json.dumps(info, indent=1))
 
 

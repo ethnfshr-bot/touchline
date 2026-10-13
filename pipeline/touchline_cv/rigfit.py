@@ -79,23 +79,93 @@ def size_search(ks, r, stable_box):
     return best
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("out")
-    ap.add_argument("--fit-size", action="store_true", help="estimate the pitch's length and width instead of assuming 105 x 68")
-    args = ap.parse_args()
-    global VERTICES
-    out = Path(args.out)
-    kf = np.load(out / "rig.npz")["keyframes"]
+def load_window(out: Path, tag: str = ""):
+    """Rays and keypoint labels for a rig solve: (kf, idx, ks, r, n)."""
+    sfx = f"_{tag}" if tag else ""
+    rz = np.load(out / f"rig{sfx}.npz")
+    kf = rz["keyframes"]
+    k1 = float(rz["k1"]) if "k1" in rz.files else 0.0
     n = len(kf)
     params = np.r_[kf[:, 2:5].ravel(), np.log(kf[:, 5])]
     pos = {int(f): i for i, f in enumerate(kf[:, 0])}
     kp = np.load(out / "pitch.npz")["keypoints"]
     obs = [(pos[int(f)], x, y, int(k)) for f, _t, k, x, y, c in kp if int(f) in pos]
-    idx = np.array([o[0] for o in obs])
-    u = np.array([[o[1], o[2]] for o in obs])
-    ks = np.array([o[3] for o in obs])
-    r = rays(params, n, 960.0, 540.0, idx, u)
+    idx = np.array([o[0] for o in obs], dtype=int)
+    u = np.array([[o[1], o[2]] for o in obs]).reshape(-1, 2)
+    ks = np.array([o[3] for o in obs], dtype=int)
+    r = rays(params, n, 960.0, 540.0, idx, u, k1) if len(obs) else np.zeros((0, 2))
+    return kf, idx, ks, r, n
+
+
+def refine(Hpr, ks, r, use, thresholds=(THRESH,)):
+    """From a pitch->ray homography, relabel mirror-confused box keypoints, keep
+    the points that agree, and refit; repeated for each threshold in turn
+    (coarse to fine), so a rough starting calibration can be pulled in.
+    Returns (Hpr, labels, inliers) or None."""
+    mir = mirror_index()
+    mk = np.array([mir.get(int(k), int(k)) for k in ks])
+    k = ks.copy()
+    for th in thresholds:
+        e_own, e_mir = ang_err(Hpr, ks, r), ang_err(Hpr, mk, r)
+        k = ks.copy()
+        swap = (e_mir < e_own) & (e_mir < th)
+        k[swap] = mk[swap]
+        inl = use & (ang_err(Hpr, k, r) < th)
+        if inl.sum() < 8 or np.linalg.matrix_rank(np.c_[VERTICES[k[inl]], np.ones(inl.sum())], tol=1.0) < 3:
+            return None
+        H2, _ = cv2.findHomography(VERTICES[k[inl]], r[inl], cv2.RANSAC, th)
+        if H2 is None:
+            return None
+        Hpr = H2
+    return Hpr, k, use & (ang_err(Hpr, k, r) < THRESH)
+
+
+# Coarse-to-fine thresholds for a handed-over seed: wide enough to accept a
+# ~10 degree seed error, narrow enough to reject ~45 degree mirror mislabels.
+SEED_STEPS = (0.25, 0.15, 0.08, 0.05, THRESH)
+
+
+def seeded_fit(out: Path, tag: str, Hpr_seed: np.ndarray):
+    """Fit a window starting from a calibration handed over by a neighbouring
+    window, instead of from its own (possibly too few) trustworthy keypoints.
+    Writes rig_G_<tag>.npy and rigfit_<tag>.json; returns the report or None."""
+    kf, idx, ks, r, n = load_window(out, tag)
+    if len(ks) < 8:
+        return None
+    every = np.ones(len(ks), bool)
+    res = refine(Hpr_seed, ks, r, every, SEED_STEPS)
+    if res is None:
+        return None
+    res2 = refine(res[0], ks, r, every) or res
+    H2, k, inl = res2
+    # Held-out check: refit from the seed with the first half only, test the
+    # second half's centre markings (the most reliably labelled).
+    half = idx < n // 2
+    r1 = refine(Hpr_seed, ks, r, half, SEED_STEPS)
+    test = ~half & np.isin(k, CENTRE)
+    if test.sum() < 5:
+        test = ~half & np.isin(k, CENTRE + LEFT)
+    if r1 is None or test.sum() < 5:
+        return None
+    et = ang_err(r1[0], k[test], r[test])
+    report = {"seeded": True, "keypoints": int(len(ks)), "inlier_share": round(float(inl.mean()), 3),
+              "relabelled_mirror": int((k != ks).sum()),
+              "time_split_test": {"median_deg": round(float(np.degrees(np.median(et))), 2), "share_within_threshold": round(float(np.mean(et < THRESH)), 3)}}
+    np.save(out / f"rig_G_{tag}.npy", np.linalg.inv(H2))
+    (out / f"rigfit_{tag}.json").write_text(json.dumps(report, indent=1))
+    return report
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("out")
+    ap.add_argument("--tag", default="", help="read rig_<tag>.npz, write rig_G_<tag>.npy")
+    ap.add_argument("--fit-size", action="store_true", help="estimate the pitch's length and width instead of assuming 105 x 68")
+    args = ap.parse_args()
+    global VERTICES
+    out = Path(args.out)
+    sfx = f"_{args.tag}" if args.tag else ""
+    kf, idx, ks, r, n = load_window(out, args.tag)
     mir = mirror_index()
 
     # Which box is stable? Try a seed fit with centre + each box, keep the better one.
@@ -159,9 +229,9 @@ def main():
     }
     if size:
         report["pitch_size_m"] = {"length": size[0], "width": size[1]}
-        np.save(out / "rig_size.npy", np.array(size[:2]))
-    np.save(out / "rig_G.npy", G)
-    (out / "rigfit.json").write_text(json.dumps(report, indent=1))
+        np.save(out / f"rig_size{sfx}.npy", np.array(size[:2]))
+    np.save(out / f"rig_G{sfx}.npy", G)
+    (out / f"rigfit{sfx}.json").write_text(json.dumps(report, indent=1))
     print(json.dumps(report, indent=1))
 
 
