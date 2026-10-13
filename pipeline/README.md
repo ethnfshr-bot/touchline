@@ -85,3 +85,8 @@ Windowed calibration (2026-10-13, `calib.py`): the match is calibrated in overla
 - Veo frames have slight barrel distortion (k1 about -0.04, estimated independently in two windows); modelling it (`rig.py --distortion`) tightens fits but doesn't remove the few-degree bend between windows.
 - Handing a calibration across a window overlap lands ~9 degrees off; coarse-to-fine refinement can't recover far-end windows because the pitch model's far-box keypoints are near-random there (~70 degrees), not just mirrored.
 - Next: register pitch **lines** directly (project the pitch layout, align to white-line pixels), which needs no learned labels and works frame by frame. Near lines extract cleanly with a simple filter; far-end lines (1-2 px, faint) need a proper thin-line detector with tree/net/flag masking.
+
+Line-based attempts (2026-10-13, `lines.py`, `lineref.py`, `pose.py`):
+- Projecting the pitch with the keypoint-based calibration showed it is wrong at line level (7% of white-line pixels within 2 px) even where keypoints agree with themselves: consistent mislabels give a self-consistent but wrong fit, which held-out tests can't catch.
+- Solving the camera's physical pose (position, height, orientation: 6 numbers per match) from white lines alone aligns the near touchline and the halfway line exactly, but the far side is unconstrained (few far lines are detected) and collapses towards the horizon. Adding centre-circle keypoints didn't fix it.
+- Conclusion: fully automatic calibration of follow-cam footage needs a pitch line/keypoint detector that works at the far end of Veo views. Options: label ~100-200 Veo frames to fine-tune one, or a one-off per-ground setup (a few clicks on one frame) after which per-frame line refinement keeps it automatic.
